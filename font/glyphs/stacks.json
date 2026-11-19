@@ -1,0 +1,27 @@
+{
+  "_comment": "Classical vertical conjuncts generated as composites: the first consonant keeps its full shape and the second is set smaller underneath it. Only pairs the upstream font would otherwise break with a visible halant are generated. Tune per base consonant here, then check the proof sheet (font/builds/proof/stacks.png) by eye.",
+  "bases": {
+    "uni0919": { "letter": "ङ" },
+    "uni091B": { "letter": "छ" },
+    "uni091F": { "letter": "ट" },
+    "uni0920": { "letter": "ठ" },
+    "uni0921": { "letter": "ड" },
+    "uni0922": { "letter": "ढ" },
+    "uni0926": { "letter": "द", "gap": 10 },
+    "uni0939": { "letter": "ह", "gap": 10 }
+  },
+  "defaults": {
+    "scale": 0.46,
+    "min_scale": 0.34,
+    "bottom": -240,
+    "max_depth": -340,
+    "gap": 18,
+    "max_width_ratio": 0.98
+  },
+  "subscripts": [
+    "uni0915", "uni0916", "uni0917", "uni0918", "uni0919", "uni091A", "uni091B", "uni091C", "uni091D", "uni091E",
+    "uni091F", "uni0920", "uni0921", "uni0922", "uni0923", "uni0924", "uni0925", "uni0926", "uni0927", "uni0928",
+    "uni092A", "uni092B", "uni092C", "uni092D", "uni092E", "uni092F", "uni0930", "uni0932", "uni0933", "uni0935",
+    "uni0936", "uni0937", "uni0938", "uni0939", "uni0915094D0937", "uni091C094D091E"
+  ]
+}

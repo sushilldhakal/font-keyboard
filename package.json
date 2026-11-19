@@ -1,0 +1,14 @@
+{
+  "name": "nagosi",
+  "private": true,
+  "description": "Nagosi: Nepali–Sanskrit font, transliteration engine and keyboards",
+  "license": "OFL-1.1 AND MIT",
+  "packageManager": "pnpm@10.12.1",
+  "scripts": {
+    "font": "python3 font/scripts/build.py",
+    "test": "pnpm -r --if-present test",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "dev": "pnpm --filter @nagosi/editor dev"
+  }
+}

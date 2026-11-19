@@ -1,0 +1,64 @@
+# XcodeGen spec: `brew install xcodegen && cd ios && ./scripts/sync-resources.sh && xcodegen`
+name: Nagosi
+options:
+  bundleIdPrefix: np.nagosi
+  deploymentTarget:
+    iOS: "16.0"
+packages:
+  NagosiEngine:
+    path: NagosiEngine
+targets:
+  Nagosi:
+    type: application
+    platform: iOS
+    sources:
+      - NagosiApp
+      - path: Fonts
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: NagosiEngine
+      - target: NagosiKeyboard
+    entitlements:
+      path: NagosiApp/Nagosi.entitlements
+    info:
+      path: NagosiApp/Info.plist
+      properties:
+        CFBundleDisplayName: Nagosi
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+    preBuildScripts:
+      - script: '"$SRCROOT/scripts/sync-resources.sh"'
+        name: Sync Nagosi resources
+        basedOnDependencyAnalysis: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: np.nagosi.keyboard
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+  NagosiKeyboard:
+    type: app-extension
+    platform: iOS
+    sources:
+      - NagosiKeyboard
+      - path: Fonts/Nagosi-Variable.ttf
+        buildPhase: resources
+    dependencies:
+      - package: NagosiEngine
+    info:
+      path: NagosiKeyboard/Info.plist
+      properties:
+        CFBundleDisplayName: Nagosi
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.keyboard-service
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
+          NSExtensionAttributes:
+            IsASCIICapable: false
+            PrefersRightToLeft: false
+            PrimaryLanguage: ne-NP
+            RequestsOpenAccess: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: np.nagosi.keyboard.extension
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"

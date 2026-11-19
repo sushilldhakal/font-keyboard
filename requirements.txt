@@ -1,0 +1,7 @@
+fonttools[woff,unicode]==4.65.0
+uharfbuzz==0.56.4
+brotli
+freetype-py
+pillow
+opentype-sanitizer
+pytest

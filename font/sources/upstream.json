@@ -1,0 +1,19 @@
+{
+  "_comment": "Pinned OFL-1.1 upstream sources Nagosi is derived from. Bump the version, url and sha256 together. The build refuses a download whose hash does not match.",
+  "devanagari": {
+    "name": "Noto Serif Devanagari",
+    "version": "2.006",
+    "license": "OFL-1.1",
+    "url": "https://github.com/notofonts/devanagari/releases/download/NotoSerifDevanagari-v2.006/NotoSerifDevanagari-v2.006.zip",
+    "sha256": "b823456dfaf6ef8b438eeb906da42effe01927add1e3416ecc86c99c5f1cf098",
+    "member": "NotoSerifDevanagari/unhinted/variable-ttf/NotoSerifDevanagari[wdth,wght].ttf"
+  },
+  "latin": {
+    "name": "Noto Serif",
+    "version": "2.015",
+    "license": "OFL-1.1",
+    "url": "https://github.com/notofonts/latin-greek-cyrillic/releases/download/NotoSerif-v2.015/NotoSerif-v2.015.zip",
+    "sha256": "0e9a43c8a4b94ac76f55069ed1d7385bbcaf6b99527a94deb5619e032b7e76c1",
+    "member": "NotoSerif/unhinted/variable-ttf/NotoSerif[wdth,wght].ttf"
+  }
+}

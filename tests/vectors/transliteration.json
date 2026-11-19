@@ -1,0 +1,245 @@
+{
+ "_comment": "Shared transliteration vectors. Every implementation (engine/ TypeScript, android/ Kotlin, ios/ Swift) must produce exactly these outputs.",
+ "cases": [
+  {
+   "scheme": "nepali-roman",
+   "input": "namaste",
+   "output": "नमस्ते"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "nepaal",
+   "output": "नेपाल"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "kathmandu",
+   "output": "कथ्मन्दु"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "kaaThamaaDauM",
+   "output": "काठमाडौं"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "mero naam",
+   "output": "मेरो नाम"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "garchha",
+   "output": "गर्छ"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "bhayo",
+   "output": "भयो"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "nayaa~",
+   "output": "नयाँ"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "saMskRt",
+   "output": "संस्कृत"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "bhagavaan_",
+   "output": "भगवान्"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "2083 saal.",
+   "output": "२०८३ साल।"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "kShetra",
+   "output": "क्षेत्र"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "kshetra",
+   "output": "क्षेत्र"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "gyaan",
+   "output": "ज्ञान"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "shaanti",
+   "output": "शान्ति"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "aaja",
+   "output": "आज"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "ii",
+   "output": "ई"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "RShi",
+   "output": "ऋषि"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "kRpaa",
+   "output": "कृपा"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "Dhakaal",
+   "output": "ढकाल"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "OM",
+   "output": "ॐ"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "hello!",
+   "output": "हेल्लो!"
+  },
+  {
+   "scheme": "iast",
+   "input": "dharmakṣetre kurukṣetre",
+   "output": "धर्मक्षेत्रे कुरुक्षेत्रे"
+  },
+  {
+   "scheme": "iast",
+   "input": "rāmam",
+   "output": "रामम्"
+  },
+  {
+   "scheme": "iast",
+   "input": "saṃskṛtam",
+   "output": "संस्कृतम्"
+  },
+  {
+   "scheme": "iast",
+   "input": "sukhinaḥ",
+   "output": "सुखिनः"
+  },
+  {
+   "scheme": "iast",
+   "input": "oṃ",
+   "output": "ॐ"
+  },
+  {
+   "scheme": "iast",
+   "input": "jñānam",
+   "output": "ज्ञानम्"
+  },
+  {
+   "scheme": "iast",
+   "input": "ṛṣiḥ",
+   "output": "ऋषिः"
+  },
+  {
+   "scheme": "iast",
+   "input": "ḷ",
+   "output": "ऌ"
+  },
+  {
+   "scheme": "iast",
+   "input": "bhagavān",
+   "output": "भगवान्"
+  },
+  {
+   "scheme": "iast",
+   "input": "r̥ṣi",
+   "output": "ऋषि"
+  },
+  {
+   "scheme": "iast",
+   "input": "aṅga",
+   "output": "अङ्ग"
+  },
+  {
+   "scheme": "iast",
+   "input": "so'ham",
+   "output": "सोऽहम्"
+  },
+  {
+   "scheme": "iast",
+   "input": "sarve bhavantu sukhinaḥ |",
+   "output": "सर्वे भवन्तु सुखिनः ।"
+  },
+  {
+   "scheme": "iast",
+   "input": "caitra",
+   "output": "चैत्र"
+  },
+  {
+   "scheme": "itrans",
+   "input": "dharmakShetre",
+   "output": "धर्मक्षेत्रे"
+  },
+  {
+   "scheme": "itrans",
+   "input": "raamaH",
+   "output": "रामः"
+  },
+  {
+   "scheme": "itrans",
+   "input": "sa.nskRRitam",
+   "output": "संस्कृतम्"
+  },
+  {
+   "scheme": "itrans",
+   "input": "j~naana",
+   "output": "ज्ञान"
+  },
+  {
+   "scheme": "itrans",
+   "input": "OM",
+   "output": "ॐ"
+  },
+  {
+   "scheme": "itrans",
+   "input": "ga~Nga",
+   "output": "गङ्ग"
+  },
+  {
+   "scheme": "itrans",
+   "input": "shiva",
+   "output": "शिव"
+  },
+  {
+   "scheme": "harvard-kyoto",
+   "input": "dharmakSetre",
+   "output": "धर्मक्षेत्रे"
+  },
+  {
+   "scheme": "harvard-kyoto",
+   "input": "rAmaH",
+   "output": "रामः"
+  },
+  {
+   "scheme": "harvard-kyoto",
+   "input": "saMskRtam",
+   "output": "संस्कृतम्"
+  },
+  {
+   "scheme": "harvard-kyoto",
+   "input": "zivaH",
+   "output": "शिवः"
+  },
+  {
+   "scheme": "harvard-kyoto",
+   "input": "aGga",
+   "output": "अङ्ग"
+  }
+ ]
+}

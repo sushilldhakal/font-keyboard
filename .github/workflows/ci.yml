@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  font:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: python font/scripts/build.py --no-proof
+      - run: python -m pytest tests/font -q
+      - name: Committed font files match the build
+        run: git diff --stat --exit-code -- font/builds/stacks.txt cdn/nagosi.css cdn/nagosi-static.css
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @nagosi/engine build
+      - run: pnpm --filter @nagosi/keyboard build
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - working-directory: android
+        run: ./gradlew :engine:test :app:assembleDebug --console=plain
+
+  ios:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bundled iOS data matches engine/
+        run: ios/scripts/sync-resources.sh || true; git diff --stat --exit-code -- ios/NagosiEngine
+      - working-directory: ios/NagosiEngine
+        run: swift test

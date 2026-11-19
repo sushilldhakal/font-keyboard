@@ -1,0 +1,33 @@
+{
+ "_comment": "Suggestion skeleton vectors: skeleton(input) == output in every implementation.",
+ "cases": [
+  {
+   "input": "संस्कृत",
+   "output": "सनसकरित"
+  },
+  {
+   "input": "सन्स्क्रित",
+   "output": "सनसकरित"
+  },
+  {
+   "input": "विकास",
+   "output": "बिकास"
+  },
+  {
+   "input": "बिकास",
+   "output": "बिकास"
+  },
+  {
+   "input": "शान्ति",
+   "output": "सानति"
+  },
+  {
+   "input": "काठमाडौं",
+   "output": "काथमादोन"
+  },
+  {
+   "input": "दीपावली",
+   "output": "दिपाबलि"
+  }
+ ]
+}

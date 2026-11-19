@@ -1,0 +1,45 @@
+{
+ "_comment": "Devanagari → roman vectors (toRoman).",
+ "cases": [
+  {
+   "scheme": "iast",
+   "input": "धर्मक्षेत्रे कुरुक्षेत्रे",
+   "output": "dharmakṣetre kurukṣetre"
+  },
+  {
+   "scheme": "iast",
+   "input": "रामः",
+   "output": "rāmaḥ"
+  },
+  {
+   "scheme": "iast",
+   "input": "संस्कृतम्",
+   "output": "saṃskṛtam"
+  },
+  {
+   "scheme": "iast",
+   "input": "सोऽहम्",
+   "output": "so'ham"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "नमस्ते",
+   "output": "namaste"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "नेपाल",
+   "output": "nepaal"
+  },
+  {
+   "scheme": "harvard-kyoto",
+   "input": "शिवः",
+   "output": "zivaH"
+  },
+  {
+   "scheme": "itrans",
+   "input": "ज़",
+   "output": "za"
+  }
+ ]
+}

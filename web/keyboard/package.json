@@ -1,0 +1,26 @@
+{
+  "name": "@nagosi/keyboard",
+  "version": "1.0.0",
+  "description": "Nepali and Sanskrit typing for any web page: Romanized Nepali, IAST, ITRANS, Harvard-Kyoto and INSCRIPT input with suggestions and an on-screen keyboard",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./keyboard.css": "./src/keyboard.css"
+  },
+  "files": ["dist", "src/keyboard.css"],
+  "sideEffects": ["*.css"],
+  "repository": { "type": "git", "url": "https://github.com/sushilldhakal/font-keyboard.git", "directory": "web/keyboard" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@nagosi/engine": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3"
+  }
+}
