@@ -1,6 +1,6 @@
 {
   "name": "@nagosi/keyboard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nepali and Sanskrit typing for any web page: Romanized Nepali, IAST, ITRANS, Harvard-Kyoto and INSCRIPT input with suggestions and an on-screen keyboard",
   "license": "MIT",
   "type": "module",

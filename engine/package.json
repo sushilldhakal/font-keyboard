@@ -1,6 +1,6 @@
 {
   "name": "@nagosi/engine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nepali and Sanskrit Romanized input: transliteration (Romanized Nepali, IAST, ITRANS, Harvard-Kyoto), Devanagari Unicode helpers and word suggestions",
   "license": "MIT",
   "type": "module",
