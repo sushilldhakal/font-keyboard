@@ -21,6 +21,9 @@ targets:
       - target: NagosiKeyboard
     entitlements:
       path: NagosiApp/Nagosi.entitlements
+      properties:
+        # install the Nagosi fonts for all apps (CTFontManagerRegisterFontURLs .persistent)
+        com.apple.developer.user-fonts: [system-installation]
     info:
       path: NagosiApp/Info.plist
       properties:
