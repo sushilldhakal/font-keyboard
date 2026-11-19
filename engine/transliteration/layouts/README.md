@@ -5,5 +5,5 @@ Each file maps a physical key (the character a US QWERTY keyboard sends) to the 
 
 | Layout | Status |
 | --- | --- |
-| `inscript.json` | INSCRIPT (IS 1991 / Windows "Devanagari - INSCRIPT"). Shipped. |
+| `inscript.json` | INSCRIPT (IS 1991 / Windows "Devanagari - INSCRIPT"). Shipped. Shift+V and Shift+B, empty in the standard, type the unshifted letter so no key ever types English. |
 | Nepali Traditional (Remington / MPP "Nepali Unicode Traditional") | **Not shipped yet.** Add it only after checking every key against the official Madan Puraskar Pustakalaya chart: a wrong key map is worse than none. |

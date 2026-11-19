@@ -14,6 +14,15 @@ describe("transliteration vectors (shared with Kotlin and Swift)", () => {
   }
 });
 
+describe("no Latin letter ever comes through", () => {
+  const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  for (const [id, s] of Object.entries(schemes)) {
+    it(id, () => {
+      for (const c of letters) expect(transliterate(c, s), `${id}: ${c}`).not.toMatch(/[A-Za-z]/);
+    });
+  }
+});
+
 describe("toRoman vectors", () => {
   for (const c of vectors("roman")) {
     it(`${c.scheme}: ${c.input}`, () => expect(toRoman(c.input, schemes[c.scheme])).toBe(c.output));

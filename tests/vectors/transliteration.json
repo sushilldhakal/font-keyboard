@@ -240,6 +240,66 @@
    "scheme": "harvard-kyoto",
    "input": "aGga",
    "output": "अङ्ग"
+  },
+  {
+   "scheme": "harvard-kyoto",
+   "input": "abcdefghijklmnopqrstuvwxyz",
+   "output": "अब्च्देफ़्घिज्क्ल्म्नोप्क़्र्स्तुव्व्क्ष्य्श्"
+  },
+  {
+   "scheme": "harvard-kyoto",
+   "input": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+   "output": "आब्च्डेफ़्ङःईञ्क्ळंणोप्क़ृष्टूव्व्क्ष्य्श्"
+  },
+  {
+   "scheme": "iast",
+   "input": "abcdefghijklmnopqrstuvwxyz",
+   "output": "अब्च्देफ़्घिज्क्ल्म्नोप्क़्र्स्तुव्व्क्ष्य्ज़्"
+  },
+  {
+   "scheme": "iast",
+   "input": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+   "output": "अब्च्देफ़्ग्हिज्क्ल्म्नोप्क़्र्स्तुव्व्क्ष्य्ज़्"
+  },
+  {
+   "scheme": "itrans",
+   "input": "abcdefghijklmnopqrstuvwxyz",
+   "output": "अब्च्देफ़्घिज्क्ल्म्नोप्क़्र्स्तुव्व्क्ष्य्ज़्"
+  },
+  {
+   "scheme": "itrans",
+   "input": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+   "output": "आब्च्डेफ़्ग़ःईज्ख़्ळंणोप्क़्र्स्टूव्व्क्ष्य्ज़्"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "abcdefghijklmnopqrstuvwxyz",
+   "output": "अब्च्देफ्घिज्क्ल्म्नोप्क़्र्स्तुव्व्क्ष्य्ज़"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+   "output": "आब्छ्डैफ्गःईज्क्ळंणौप्क़ृश्टूव्व्क्ष्य्ज़"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "QWERTYUIOP",
+   "output": "क़्वैऋट्यूईऔप"
+  },
+  {
+   "scheme": "nepali-roman",
+   "input": "Yo Pani",
+   "output": "यो पनि"
+  },
+  {
+   "scheme": "iast",
+   "input": "Rāmaḥ",
+   "output": "रामः"
+  },
+  {
+   "scheme": "iast",
+   "input": "Śiva Kṛṣṇa",
+   "output": "शिव कृष्ण"
   }
  ]
 }

@@ -117,19 +117,20 @@ function reverse(scheme: Scheme): Reverse {
   if (hit) return hit;
   const r: Reverse = {
     consonants: new Map(), vowels: new Map(), matras: new Map(), other: new Map(),
-    inherent: "a", finalVirama: scheme.finalVirama,
+    inherent: "", finalVirama: scheme.finalVirama,
   };
   const put = (m: Map<string, string>, k: string, v: string) => {
     const key = k.normalize("NFD"); // nukta letters decompose: क़ = क + ़
     if (key && !m.has(key)) m.set(key, v);
   };
   for (const [k, out, matra] of scheme.vowels) {
-    if (matra === "" && out === "अ") r.inherent = k;
+    if (matra === "" && out === "अ" && !r.inherent) r.inherent = k; // first listing wins, like every map here
     put(r.vowels, out, k);
     if (matra) put(r.matras, matra, k);
   }
   for (const [k, out] of scheme.consonants) if ([...out.normalize("NFD")].length <= 2 && !out.includes(HALANT)) put(r.consonants, out, k);
   for (const [k, out] of [...scheme.marks, ...scheme.symbols]) put(r.other, out, k);
+  if (!r.inherent) r.inherent = "a";
   reverseCache.set(scheme, r);
   return r;
 }

@@ -72,6 +72,29 @@ describe("Nagosi Type Studio", () => {
     key("k").click(); key("a").click(); key("m").click(); key("a").click(); key("l").click();
     expect(ta.value).toBe("कमल");
   });
+  it("no key on the on-screen keyboard types English, with or without Shift", () => {
+    for (const scheme of ["nepali-roman", "iast", "itrans", "harvard-kyoto", "inscript"]) {
+      const sel = doc.getElementById("scheme");
+      sel.value = scheme;
+      sel.dispatchEvent(new win.Event("change"));
+      for (const shifted of [false, true]) {
+        const letters = [...doc.querySelectorAll("#kbd .nagosi-key")].filter((b) => /^[a-z]$/i.test(b.querySelector(".nagosi-key-sub")?.textContent ?? "")).length;
+        for (let i = 0; i < letters; i++) {
+          ta.value = "";
+          ta.setSelectionRange(0, 0);
+          if (shifted) doc.querySelector('#kbd .nagosi-key[aria-label="Shift"]').click();
+          const keys = [...doc.querySelectorAll("#kbd .nagosi-key")].filter((b) => /^[a-z]$/i.test(b.querySelector(".nagosi-key-sub")?.textContent ?? ""));
+          const k = keys[i];
+          const label = k.querySelector(".nagosi-key-main").textContent;
+          k.click();
+          doc.querySelector('#kbd .nagosi-key[aria-label="Space"]').click();
+          const out = ta.value.trim();
+          expect(out, `${scheme} ${shifted ? "shift+" : ""}${k.querySelector(".nagosi-key-sub").textContent}`).not.toMatch(/[A-Za-z]/);
+          if (scheme === "nepali-roman" && !/[\u093E-\u094C\u0902\u0903]/.test(label)) expect(out, "label matches output").toBe(label);
+        }
+      }
+    }
+  });
   it("INSCRIPT maps keys directly", () => {
     const sel = doc.getElementById("scheme");
     sel.value = "inscript";
