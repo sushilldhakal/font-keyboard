@@ -215,7 +215,7 @@ function buildCharset() {
 }
 
 const CSS_SNIPPET = `<link rel="stylesheet"
-  href="https://cdn.jsdelivr.net/gh/sushilldhakal/font-keyboard@main/cdn/nagosi.css">
+  href="https://cdn.jsdelivr.net/gh/sushilldhakal/font-keyboard@v1.0.0/cdn/nagosi.css">
 
 <style>
   body { font-family: "Nagosi", serif; }
