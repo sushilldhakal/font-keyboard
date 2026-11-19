@@ -69,4 +69,10 @@ final class VectorTests: XCTestCase {
         }
         XCTAssertEqual(Spellings.commitWord("dhakal", "धकल", sc, sug, sp), "ढकाल")
     }
+
+    func testTraditionalLayout() throws {
+        let l = try PhoneLayout.bundled()
+        XCTAssertEqual(l.rows.map { $0.map { $0.0 }.joined() }, ["ञघङझछटठडढण्", "धभचतथगषयउृे", "बकमानजवपिसु", "शहअखदलफ,र"])
+        XCTAssertEqual(l.rows[2][1].1, "क्ष")
+    }
 }

@@ -37,6 +37,7 @@ val syncNagosiAssets by tasks.registering(Copy::class) {
     from(File(repo, "engine/transliteration/schemes")) { into("schemes") }
     from(File(repo, "engine/transliteration/layouts")) { into("layouts") }
     from(File(repo, "engine/suggestions/data")) { into("dictionaries") }
+    from(File(repo, "engine/keyboards")) { into("keyboards") }
     from(File(repo, "font/builds/variable")) {
         include("Nagosi[wght].ttf")
         rename { "Nagosi-Variable.ttf" }

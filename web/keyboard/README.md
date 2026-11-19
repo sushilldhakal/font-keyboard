@@ -24,9 +24,11 @@ new OnScreenKeyboard(document.querySelector("#kbd"), input);   // optional
   Turn the automatic pick off with `autoPick: false`.
 - Physical keyboards: each roman key updates the composing word inline (`namast` → नमस्त → `namaste` → नमस्ते).
   Backspace removes the last roman key. Space, Enter or punctuation commits. Tab takes the first suggestion.
-- On-screen keyboard: hold a key for related letters (hold `d` for ध ड ढ, `a` for आ, `s` for श ष).
-  The **कख** key opens the Devanagari letter keys: every letter, vowel sign and digit on its own key,
-  typed as is, with suggestions for the word at the caret. `input.insert(text)` does the same from your own UI.
+- On-screen keyboard: opens on the **Nepali traditional** keys (`engine/keyboards/nepali-traditional.json`).
+  Every key types its Devanagari letter; hold a key, or press ⇧ first, for the small letter in its
+  corner (क → क्ष, ि → ी); १२३ opens digits; suggestions follow the word at the caret. **abc** switches
+  to the romanized keys, where holding a key gives related letters (`d` → ध ड ढ). `input.insert(text)`
+  types Devanagari directly from your own UI.
 - Phone keyboards that compose Latin words (Gboard, SwiftKey) are converted word by word.
   For full-time phone typing use the Nagosi Android and iOS keyboards.
 - Set `font-family: "Nagosi"` on the field (see `cdn/`) so conjuncts render in the classical style.

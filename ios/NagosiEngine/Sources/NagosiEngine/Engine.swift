@@ -278,3 +278,23 @@ public struct DirectLayout {
                             keys: o["keys"] as? [String: String] ?? [:])
     }
 }
+
+/// A phone keyboard whose keys type Devanagari directly: each key is (tap, hold), hold "" when none.
+/// engine/keyboards/<id>.json; the default is the Nepali traditional layout.
+public struct PhoneLayout {
+    public let rows: [[(String, String)]]
+    public let bottom: [(String, String)]
+    public let numbers: [[(String, String)]]
+
+    public static func bundled(_ id: String = "nepali-traditional") throws -> PhoneLayout {
+        guard let url = Bundle.module.url(forResource: id, withExtension: "json", subdirectory: "Resources/keyboards"),
+              let o = try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any] else {
+            throw NSError(domain: "Nagosi", code: 6, userInfo: [NSLocalizedDescriptionKey: "no keyboard \(id)"])
+        }
+        func keys(_ a: Any?) -> [(String, String)] {
+            ((a as? [[String]]) ?? []).map { ($0.first ?? "", $0.count > 1 ? $0[1] : "") }
+        }
+        func grid(_ a: Any?) -> [[(String, String)]] { ((a as? [Any]) ?? []).map { keys($0) } }
+        return PhoneLayout(rows: grid(o["rows"]), bottom: keys(o["bottom"]), numbers: grid(o["numbers"]))
+    }
+}

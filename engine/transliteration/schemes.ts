@@ -30,4 +30,18 @@ export interface Layout {
 
 export const layouts: Record<string, Layout> = {"inscript":{"id":"inscript","name":"INSCRIPT (Devanagari)","description":"Bureau of Indian Standards INSCRIPT layout: each physical key types one Devanagari letter or sign directly, no composition.","rows":[["`","1","2","3","4","5","6","7","8","9","0","-","="],["q","w","e","r","t","y","u","i","o","p","[","]","\\"],["a","s","d","f","g","h","j","k","l",";","'"],["z","x","c","v","b","n","m",",",".","/"]],"shiftOf":{"0":")","1":"!","2":"@","3":"#","4":"$","5":"%","6":"^","7":"&","8":"*","9":"(","`":"~","-":"_","=":"+","[":"{","]":"}","\\":"|",";":":","'":"\"",",":"<",".":">","/":"?","q":"Q","w":"W","e":"E","r":"R","t":"T","y":"Y","u":"U","i":"I","o":"O","p":"P","a":"A","s":"S","d":"D","f":"F","g":"G","h":"H","j":"J","k":"K","l":"L","z":"Z","x":"X","c":"C","v":"V","b":"B","n":"N","m":"M"},"keys":{"0":"०","1":"१","2":"२","3":"३","4":"४","5":"५","6":"६","7":"७","8":"८","9":"९","`":"ॊ","-":"-","=":"ृ","q":"ौ","w":"ै","e":"ा","r":"ी","t":"ू","y":"ब","u":"ह","i":"ग","o":"द","p":"ज","[":"ड","]":"़","\\":"ॉ","a":"ो","s":"े","d":"्","f":"ि","g":"ु","h":"प","j":"र","k":"क","l":"त",";":"च","'":"ट","z":"ॆ","x":"ं","c":"म","v":"न","b":"व","n":"ल","m":"स",",":",",".":".","/":"य","~":"ऒ","!":"ऍ","@":"ॅ","#":"्र","$":"र्","%":"ज्ञ","^":"त्र","&":"क्ष","*":"श्र","(":"(",")":")","_":"ः","+":"ऋ","Q":"औ","W":"ऐ","E":"आ","R":"ई","T":"ऊ","Y":"भ","U":"ङ","I":"घ","O":"ध","P":"झ","{":"ढ","}":"ञ","|":"ऑ","A":"ओ","S":"ए","D":"अ","F":"इ","G":"उ","H":"फ","J":"ऱ","K":"ख","L":"थ",":":"छ","\"":"ठ","Z":"ऎ","X":"ँ","C":"ण","N":"ळ","M":"श","<":"ष",">":"।","?":"य़","B":"व","V":"न"}}};
 
+/** A phone key: [tap, hold or Shift] ("" when the key has no second letter). */
+export type PhoneKey = [tap: string, hold: string];
+
+export interface PhoneLayout {
+  id: string;
+  name: string;
+  description: string;
+  rows: PhoneKey[][];
+  bottom: PhoneKey[];
+  numbers: PhoneKey[][];
+}
+
+export const keyboards: Record<string, PhoneLayout> = {"nepali-traditional":{"id":"nepali-traditional","name":"नेपाली (traditional)","description":"Phone layout of the Nepali traditional keyboard: every key types a Devanagari letter or sign directly. Each key is [tap, hold or Shift]; an empty second value means the key has no second letter. Letters are typed in Unicode order (क then ि gives कि).","rows":[[["ञ","१"],["घ","२"],["ङ","३"],["झ","४"],["छ","५"],["ट","६"],["ठ","७"],["ड","८"],["ढ","९"],["ण","०"],["्","ं"]],[["ध","ो"],["भ",""],["च","त्र"],["त","त्त"],["थ","ऐ"],["ग","ए"],["ष","ई"],["य","इ"],["उ","ऊ"],["ृ",""],["े","ै"]],[["ब","ह्म"],["क","क्ष"],["म","ओ"],["ा","ँ"],["न","ह्न"],["ज","ज्ञ"],["व","औ"],["प","प्र"],["ि","ी"],["स","स्र"],["ु","ू"]],[["श","श्र"],["ह","हृ"],["अ","ऋ"],["ख","आ"],["द","द्व"],["ल","ऌ"],["फ","ः"],[",","ौ"],["र","ॐ"]]],"bottom":[[".","ऽ"],["।","॥"]],"numbers":[[["१","1"],["२","2"],["३","3"],["४","4"],["५","5"],["६","6"],["७","7"],["८","8"],["९","9"],["०","0"]],[["-","_"],["/","\\"],[":",""],[";",""],["(","["],[")","]"],["रु","₹"],["&",""],["@",""],["\"",""]],[["?",""],["!",""],["'",""],["%",""],["+","="],["*","#"],["ॐ",""],["ऽ",""],["॰",""]]]}};
+
 export const schemes: Record<string, Scheme> = { "harvard-kyoto": harvardKyoto, "iast": iast, "itrans": itrans, "nepali-roman": nepaliRoman };

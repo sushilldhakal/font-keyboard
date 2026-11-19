@@ -2,8 +2,8 @@ export { transliterate, toRoman, compile, HALANT } from "./transliteration/trans
 export type { CompiledScheme } from "./transliteration/transliterator.js";
 export { Composer, COMMIT_KEYS } from "./transliteration/composer.js";
 export type { ComposerState, KeyResult } from "./transliteration/composer.js";
-export { schemes, layouts, nepaliRoman, iast, itrans, harvardKyoto } from "./transliteration/schemes.js";
-export type { Scheme, Layout } from "./transliteration/schemes.js";
+export { schemes, layouts, keyboards, nepaliRoman, iast, itrans, harvardKyoto } from "./transliteration/schemes.js";
+export type { Scheme, Layout, PhoneLayout, PhoneKey } from "./transliteration/schemes.js";
 export * as unicode from "./unicode/devanagari.js";
 export { normalize, aksharas, validate, toDevanagariDigits, toAsciiDigits, isDevanagari } from "./unicode/devanagari.js";
 export { Suggester, skeleton } from "./suggestions/suggester.js";

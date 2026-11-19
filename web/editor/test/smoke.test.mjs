@@ -67,6 +67,8 @@ describe("Nagosi Type Studio", () => {
     sel.dispatchEvent(new win.Event("change"));
     doc.getElementById("kbd-toggle").click();
     expect(doc.getElementById("kbd").hidden).toBe(false);
+    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("traditional"); // the default
+    doc.querySelector('#kbd .nagosi-key[aria-label="Romanized keys"]').click();
     ta.value = "";
     ta.setSelectionRange(0, 0);
     const key = (c) => [...doc.querySelectorAll(".nagosi-key")].find((b) => b.querySelector(".nagosi-key-sub")?.textContent === c);
@@ -152,23 +154,31 @@ describe("typing a name like ढकाल, three ways", () => {
     expect(ta.value).toBe("ढकाल");
   });
 
-  it("the कख letter keys type letters directly and suggest the word", () => {
+  it("the Nepali traditional keys: tap for the letter, hold or Shift for the corner letter", () => {
     clear();
-    const letter = (t) => [...doc.querySelectorAll("#kbd .nagosi-key")].find((b) => b.querySelector(".nagosi-key-main")?.textContent === t);
-    letter("कख").click();
-    expect(doc.querySelector("#kbd").querySelector('[data-layout="letters"]') ?? doc.querySelector('#kbd .nagosi-kbd[data-layout="letters"]')).not.toBeNull();
-    for (const t of ["ढ", "क", "ा"]) letter(t).click();
-    expect(ta.value).toBe("ढका");
+    const kbdKey = (t) => [...doc.querySelectorAll("#kbd .nagosi-key")].find((b) => b.querySelector(".nagosi-key-main")?.textContent === t);
+    kbdKey("कख").click();
+    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("traditional");
+    const rows = [...doc.querySelectorAll("#kbd .nagosi-row")].map((r) => [...r.querySelectorAll(".nagosi-key.phone .nagosi-key-main")].map((m) => m.textContent).join(""));
+    expect(rows.slice(0, 4)).toEqual(["ञघङझछटठडढण्", "धभचतथगषयउृे", "बकमानजवपिसु", "शहअखदलफ,र"]);
+    for (const t of ["ढ", "क", "ा"]) kbdKey(t).click();
     expect(chips()).toContain("ढकाल");
-    [...doc.querySelectorAll("#suggest button")].find((b) => b.textContent.endsWith("ढकाल")).click();
-    expect(ta.value).toBe("ढकाल ");
-    for (const t of ["न", "े", "प", "ा", "ल"]) letter(t).click();
-    expect(ta.value).toBe("ढकाल नेपाल");
-    letter("अ१").click();
-    letter("॥").click();
-    expect(ta.value).toBe("ढकाल नेपाल॥");
-    letter("कख").click();
-    letter("abc").click();
-    expect(doc.querySelector('#kbd .nagosi-kbd').dataset.layout).toBe("roman");
+    kbdKey("ल").click();
+    expect(ta.value).toBe("ढकाल");
+    kbdKey("space").click();
+    // hold क → क्ष; ⇧ then ि → ी
+    kbdKey("क").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    kbdKey("ि").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    expect(ta.value).toBe("ढकाल क्षी");
+    kbdKey("⇧").click();
+    expect(kbdKey("त्र")).toBeTruthy(); // Shift shows the corner letters
+    kbdKey("त्र").click();
+    expect(ta.value).toBe("ढकाल क्षीत्र");
+    kbdKey("१२३").click();
+    kbdKey("५").click();
+    expect(ta.value).toBe("ढकाल क्षीत्र५");
+    kbdKey("कख").click();
+    kbdKey("abc").click();
+    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("roman");
   });
 });

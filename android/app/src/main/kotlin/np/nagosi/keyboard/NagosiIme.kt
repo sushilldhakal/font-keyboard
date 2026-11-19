@@ -22,7 +22,8 @@ import org.json.JSONObject
  * Roman keys update an inline composing word (setComposingText). Space, enter or punctuation
  * commits it: for loosely typed Romanized Nepali the best dictionary word ("dhakal" → ढकाल), and a
  * Backspace straight after puts the typed word back. A suggestion tap replaces the word. Backspace
- * removes the last roman key while composing. The कख page types Devanagari letters directly.
+ * removes the last roman key while composing. The default Nepali traditional keys type Devanagari
+ * letters directly, with suggestions for the word before the cursor.
  */
 class NagosiIme : InputMethodService() {
     private lateinit var composer: Composer
@@ -75,8 +76,13 @@ class NagosiIme : InputMethodService() {
             override fun onSwitchScheme() = cycleScheme()
             override fun onNextKeyboard() = switchToNextInputMethodCompat()
             override fun onEnter() = enter()
+            override fun onLayout(traditional: Boolean) {
+                commitComposing()
+                prefs.edit().putBoolean(KEY_TRADITIONAL, traditional).apply()
+            }
         })
         keyboard = view
+        view.traditional = prefs.getBoolean(KEY_TRADITIONAL, true)
         view.setScheme(currentSchemeId())
         return view
     }
@@ -261,5 +267,6 @@ class NagosiIme : InputMethodService() {
     companion object {
         const val PREFS = "nagosi"
         const val KEY_SCHEME = "scheme"
+        const val KEY_TRADITIONAL = "traditional"
     }
 }

@@ -10,7 +10,7 @@ engine, a web keyboard, an Android keyboard and an iOS keyboard. They share one 
   with a visible halant. They were chosen by shaping real Sanskrit texts, where they occur thousands of times.
 - **Input**: type Nepali the way it sounds. `dhakal` gives ढकाल, `nepal` नेपाल, `tapai` तपाईं: a
   37,700-word Nepali dictionary and a letter-pair model pick the right spelling, and a Backspace right
-  after undoes the pick. Or hold a key (`d` → ध ड ढ), or tap the letters on the कख page. IAST,
+  after undoes the pick. Or hold a key (`d` → ध ड ढ), or tap letters directly on the Nepali traditional keys (the default on-screen layout). IAST,
   ITRANS, Harvard-Kyoto and INSCRIPT are there for Sanskrit. Everything works offline.
 
 | | Folder | Status |
@@ -53,7 +53,7 @@ pnpm install && pnpm test                   # engine + web editor
 | Pick another spelling | `dhakal`, tap a candidate | ढकाल, धकाल, ढकल … |
 | Exact letters with capitals | `Dhakaal` | ढकाल, never changed |
 | Hold a key (on-screen) | hold `d` → ढ, `a`, `k`, hold `a` → आ, `l` | ढकाल |
-| Letter keys (कख) | ढ क ा ल | ढकाल |
+| Nepali traditional keys (default) | ढ क ा ल | ढकाल |
 
 ## One engine, three platforms
 

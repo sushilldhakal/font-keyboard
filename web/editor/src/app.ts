@@ -32,7 +32,7 @@ const dictionaries: Record<string, Suggester> = {
 const speller = new Speller(bigrams as Record<string, number>);
 
 const HINTS: Record<string, string> = {
-  "nepali-roman": "Type the way it sounds: <kbd>dhakal</kbd> → ढकाल, <kbd>nepal</kbd> → नेपाल, <kbd>tapai</kbd> → तपाईं. Space takes the best dictionary word; <kbd>Backspace</kbd> right after puts back what you typed. Tap a suggestion for another spelling. To force a letter use capitals (<kbd>T D N Sh</kbd> = ट ड ण ष, <kbd>Dhakaal</kbd>), or hold a key on the on-screen keyboard, or switch it to <b>कख</b> and tap the letters. <kbd>~</kbd> ँ, <kbd>M</kbd> ं, <kbd>_</kbd> halant, <kbd>.</kbd> ।",
+  "nepali-roman": "Type the way it sounds: <kbd>dhakal</kbd> → ढकाल, <kbd>nepal</kbd> → नेपाल, <kbd>tapai</kbd> → तपाईं. Space takes the best dictionary word; <kbd>Backspace</kbd> right after puts back what you typed. Tap a suggestion for another spelling. To force a letter use capitals (<kbd>T D N Sh</kbd> = ट ड ण ष, <kbd>Dhakaal</kbd>), or hold a key on the on-screen keyboard, or use the on-screen Nepali traditional keys (<b>कख</b>): tap for the big letter, hold for the small one in the corner. <kbd>~</kbd> ँ, <kbd>M</kbd> ं, <kbd>_</kbd> halant, <kbd>.</kbd> ।",
   iast: "Type IAST with diacritics: <kbd>dharmakṣetre</kbd> → धर्मक्षेत्रे, <kbd>saṃskṛtam</kbd> → संस्कृतम्. A final consonant gets a halant. <kbd>|</kbd> । <kbd>||</kbd> ॥",
   itrans: "ITRANS in plain ASCII: <kbd>dharmakShetre</kbd> → धर्मक्षेत्रे, <kbd>raamaH</kbd> → रामः, <kbd>.N</kbd> ँ, <kbd>.h</kbd> halant.",
   "harvard-kyoto": "Harvard-Kyoto in plain ASCII: <kbd>dharmakSetre</kbd> → धर्मक्षेत्रे, <kbd>zivaH</kbd> → शिवः.",
@@ -121,7 +121,7 @@ function applyStyle() {
 
 schemeSel.addEventListener("change", () => {
   input.setScheme(schemeSel.value as SchemeId);
-  if (kbd.currentLayout !== "letters") kbd.setLayout(schemeSel.value === "inscript" ? "inscript" : "roman");
+  if (kbd.currentLayout !== "traditional") kbd.setLayout(schemeSel.value === "inscript" ? "inscript" : "roman");
   applyStyle();
   renderSuggestions();
   text.focus();
@@ -239,7 +239,7 @@ for (const f of ["ss01", "ss02", "ss03"]) ($<HTMLInputElement>(f)).checked = sto
 if (![...schemeSel.options].some((o) => o.value === schemeSel.value)) schemeSel.value = "nepali-roman";
 input.setScheme(schemeSel.value as SchemeId);
 input.setSuggester(dictionaries[langSel.value]);
-kbd.setLayout(schemeSel.value === "inscript" ? "inscript" : "roman");
+if (schemeSel.value === "inscript") kbd.setLayout("inscript");
 text.value = store.get("text") ?? SAMPLE_NE;
 buildWaterfall();
 buildStacks();

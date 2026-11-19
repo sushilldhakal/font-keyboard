@@ -29,6 +29,18 @@
   box-shadow: 0 6px 20px rgba(0,0,0,.25);
 }
 .nagosi-pop .nagosi-key { width: 52px; flex: 0 0 auto; }
-.nagosi-kbd[data-layout="letters"] .nagosi-key { height: 46px; }
-.nagosi-kbd[data-layout="letters"] .nagosi-key-main { font-size: 22px; }
-@media (max-width: 480px) { .nagosi-kbd[data-layout="letters"] .nagosi-key { height: 40px; } .nagosi-kbd[data-layout="letters"] .nagosi-key-main { font-size: 18px; } }
+/* Traditional keys: big letter in the middle, the hold letter small in the top-right corner. */
+.nagosi-key.phone { position: relative; }
+.nagosi-key.phone .nagosi-key-main { font-size: 23px; padding-top: 6px; }
+.nagosi-key.phone .nagosi-key-sub {
+  position: absolute; top: 4px; right: 5px; font: 11px "Nagosi", "Noto Serif Devanagari", serif; color: var(--nk-sub);
+}
+.nagosi-kbd[data-layout="traditional"] .nagosi-row { gap: 4px; }
+.nagosi-kbd[data-layout="traditional"] .nagosi-key { height: 48px; }
+@media (max-width: 480px) {
+  .nagosi-kbd[data-layout="traditional"] { padding: 6px 3px; }
+  .nagosi-kbd[data-layout="traditional"] .nagosi-row { gap: 3px; }
+  .nagosi-kbd[data-layout="traditional"] .nagosi-key { height: 44px; border-radius: 6px; }
+  .nagosi-key.phone .nagosi-key-main { font-size: 19px; padding-top: 8px; }
+  .nagosi-key.phone .nagosi-key-sub { font-size: 9px; top: 1px; right: 2px; line-height: 1; }
+}

@@ -11,6 +11,7 @@ import android.view.Gravity
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import android.widget.FrameLayout
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.PopupWindow
@@ -19,8 +20,9 @@ import android.widget.TextView
 /**
  * Keyboard UI built in code: a suggestion strip, the key rows and a bottom row.
  *
- * Two pages: the romanized keys (hold a key for related letters: d → ध ड ढ, a → आ) and कख, the
- * Devanagari letter keys, which type each letter as is. Same layouts as web/keyboard/src/keyboard.ts.
+ * Two layouts: the Nepali traditional keys (default; every key types its letter, hold or ⇧ for the
+ * small letter in its corner, १२३ for digits) and the romanized keys (hold a key for related
+ * letters: d → ध ड ढ). Same layouts as web/keyboard/src/keyboard.ts.
  */
 @SuppressLint("ViewConstructor")
 class KeyboardView(
@@ -37,6 +39,7 @@ class KeyboardView(
         fun onSwitchScheme()
         fun onNextKeyboard()
         fun onEnter()
+        fun onLayout(traditional: Boolean)
     }
 
     private val dark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -50,7 +53,9 @@ class KeyboardView(
     private val rowsBox = LinearLayout(context)
     private var shift = false
     private var scheme = "nepali-roman"
-    private var letters = false
+    /** Nepali traditional keys (true) or romanized keys. */
+    var traditional = true
+        set(v) { field = v; page = 0; shift = false; render() }
     private var page = 0
     private var popup: PopupWindow? = null
 
@@ -73,7 +78,6 @@ class KeyboardView(
     fun setScheme(id: String) {
         scheme = id
         shift = false
-        letters = false
         page = 0
         render()
         showSuggestions("", emptyList())
@@ -118,8 +122,8 @@ class KeyboardView(
     private fun render() {
         popup?.dismiss()
         rowsBox.removeAllViews()
-        if (letters) {
-            renderLetters()
+        if (traditional) {
+            renderTraditional()
             return
         }
         val rs = rows()
@@ -141,28 +145,80 @@ class KeyboardView(
         val schemeLabel = when (scheme) { "nepali-roman" -> "नेपाली"; "iast" -> "IAST"; else -> "INSCRIPT" }
         bottom.addView(key("🌐", "", 1.2f, keyBg) { listener.onNextKeyboard() })
         bottom.addView(key(schemeLabel, "", 1.6f, keyBg) { listener.onSwitchScheme() })
-        bottom.addView(key("कख", "", 1.2f, keyBg) { letters = true; page = 0; render() })
+        bottom.addView(key("कख", "", 1.2f, keyBg) { traditional = true; listener.onLayout(true) })
         bottom.addView(key("।", "", 1f, keyBg) { listener.onKey(if (scheme == "inscript") ">" else "|") })
         bottom.addView(key("space", "", 3.4f, keyBg) { listener.onKey(" ") })
         bottom.addView(key("↵", "", 1.5f, accent) { listener.onEnter() })
         rowsBox.addView(bottom)
     }
 
-    private fun renderLetters() {
-        val rs = LETTER_PAGES[page]
+    private fun renderTraditional() {
+        val rs = if (page == 0) NagosiAssets.traditionalRows(context) else NagosiAssets.traditionalNumbers(context)
         rs.forEachIndexed { i, row ->
             val line = row()
-            for (k in row) line.addView(key(k, "", 1f, keyBg, height = 46) { listener.onInsert(k) })
-            if (i == rs.lastIndex) line.addView(key("⌫", "", 1.5f, keyBg, repeat = true, height = 46) { listener.onBackspace() })
+            val last = i == rs.lastIndex
+            if (last && page == 0) line.addView(key("⇧", "", 1.4f, if (shift) accent else keyBg, height = 48) { shift = !shift; render() })
+            for (k in row) line.addView(phoneKey(k[0], k[1]))
+            if (last) line.addView(key("⌫", "", 1.4f, keyBg, repeat = true, height = 48) { listener.onBackspace() })
             rowsBox.addView(line)
         }
+        val (dot, danda) = NagosiAssets.traditionalBottom(context)
         val bottom = row()
-        bottom.addView(key("🌐", "", 1.2f, keyBg) { listener.onNextKeyboard() })
-        bottom.addView(key("abc", "", 1.4f, keyBg) { letters = false; render() })
-        bottom.addView(key(if (page == 0) "अ१" else "कख", "", 1.4f, keyBg) { page = 1 - page; render() })
-        bottom.addView(key("space", "", 4f, keyBg) { listener.onInsert(" ") })
+        bottom.addView(key(if (page == 0) "१२३" else "कख", "", 1.4f, keyBg) { page = 1 - page; shift = false; render() })
+        bottom.addView(key("🌐", "", 1.1f, keyBg) { listener.onNextKeyboard() })
+        bottom.addView(key("abc", "", 1.2f, keyBg) { traditional = false; listener.onLayout(false) })
+        bottom.addView(phoneKey(dot[0], dot[1], 1f))
+        bottom.addView(key("space", "", 3.6f, keyBg) { listener.onInsert(" ") })
+        bottom.addView(phoneKey(danda[0], danda[1], 1f))
         bottom.addView(key("↵", "", 1.5f, accent) { listener.onEnter() })
         rowsBox.addView(bottom)
+    }
+
+    /** A traditional key: big letter in the middle, the hold letter small in the top-right corner. */
+    private fun phoneKey(tap: String, hold: String, weight: Float = 1f): View {
+        val shown = if (shift && hold.isNotEmpty()) hold else tap
+        val corner = if (shift) (if (hold.isNotEmpty()) tap else "") else hold
+        val box = FrameLayout(context).apply {
+            background = rounded(keyBg)
+            isClickable = true
+            isFocusable = true
+            contentDescription = if (hold.isNotEmpty()) "$tap, hold for $hold" else tap
+        }
+        box.addView(TextView(context).apply {
+            text = shown
+            typeface = this@KeyboardView.typeface
+            setTextColor(ink)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, if (shown.length > 2) 16f else 21f)
+            gravity = Gravity.CENTER
+            includeFontPadding = false
+            setPadding(0, dp(6), 0, 0)
+        }, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        if (corner.isNotEmpty()) {
+            box.addView(TextView(context).apply {
+                text = corner
+                typeface = this@KeyboardView.typeface
+                setTextColor(sub)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f)
+                includeFontPadding = false
+            }, FrameLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply {
+                setMargins(0, dp(2), dp(3), 0)
+            })
+        }
+        box.setOnClickListener {
+            it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+            listener.onInsert(shown)
+            if (shift) { shift = false; render() }
+        }
+        if (hold.isNotEmpty()) {
+            box.setOnLongClickListener {
+                it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                listener.onInsert(if (shift) tap else hold)
+                if (shift) { shift = false; render() }
+                true
+            }
+        }
+        box.layoutParams = LayoutParams(0, dp(48), weight).apply { setMargins(dp(1), dp(3), dp(1), dp(3)) }
+        return box
     }
 
     /** Long-press choices above a key; each types its roman keys. */
@@ -297,24 +353,6 @@ class KeyboardView(
             "m" to listOf("ं" to "M", "ँ" to "~"),
             "l" to listOf("ळ" to "L"),
             "y" to listOf("ञ" to "yn"),
-        )
-
-        /** Letter pages (same as web LETTER_PAGES); each key types its label. */
-        val LETTER_PAGES: List<List<List<String>>> = listOf(
-            listOf(
-                listOf("ा", "ि", "ी", "ु", "ू", "ृ", "े", "ै", "ो", "ौ"),
-                listOf("क", "ख", "ग", "घ", "ङ", "च", "छ", "ज", "झ", "ञ"),
-                listOf("ट", "ठ", "ड", "ढ", "ण", "त", "थ", "द", "ध", "न"),
-                listOf("प", "फ", "ब", "भ", "म", "य", "र", "ल", "व", "श"),
-                listOf("ष", "स", "ह", "क्ष", "त्र", "ज्ञ", "्", "ं", "ँ"),
-            ),
-            listOf(
-                listOf("अ", "आ", "इ", "ई", "उ", "ऊ", "ऋ", "ए", "ऐ", "ओ"),
-                listOf("औ", "अं", "अः", "ः", "ऽ", "ॐ", "।", "॥", "ॠ", "ळ"),
-                listOf("१", "२", "३", "४", "५", "६", "७", "८", "९", "०"),
-                listOf("श्र", "द्ध", "द्य", "द्व", "ह्म", "ट्ट", "र्", "़", "ॄ", "?"),
-                listOf(",", ".", "!", "-", "(", ")", "\"", "'", "/"),
-            ),
         )
 
         /** What a roman key produces on its own in Romanized Nepali (labels only; same as web). */

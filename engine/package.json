@@ -14,12 +14,14 @@
     "./dictionaries/ne.json": "./suggestions/data/ne.json",
     "./dictionaries/sa.json": "./suggestions/data/sa.json",
     "./schemes/*.json": "./transliteration/schemes/*.json",
-    "./dictionaries/bigrams.json": "./suggestions/data/bigrams.json"
+    "./dictionaries/bigrams.json": "./suggestions/data/bigrams.json",
+    "./keyboards/*.json": "./keyboards/*.json"
   },
   "files": [
     "dist",
     "suggestions/data",
-    "transliteration/schemes"
+    "transliteration/schemes",
+    "keyboards"
   ],
   "sideEffects": false,
   "repository": {

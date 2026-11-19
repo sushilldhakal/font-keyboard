@@ -4,10 +4,11 @@
 set -eu
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 RES="$ROOT/ios/NagosiEngine/Sources/NagosiEngine/Resources"
-rm -rf "$RES" && mkdir -p "$RES/schemes" "$RES/layouts" "$RES/dictionaries"
+rm -rf "$RES" && mkdir -p "$RES/schemes" "$RES/layouts" "$RES/dictionaries" "$RES/keyboards"
 cp "$ROOT"/engine/transliteration/schemes/*.json "$RES/schemes/"
 cp "$ROOT"/engine/transliteration/layouts/*.json "$RES/layouts/"
 cp "$ROOT"/engine/suggestions/data/*.json "$RES/dictionaries/"
+cp "$ROOT"/engine/keyboards/*.json "$RES/keyboards/"
 mkdir -p "$ROOT/ios/Fonts"
 cp "$ROOT"/font/builds/static/ttf/Nagosi-*.ttf "$ROOT/ios/Fonts/"
 cp "$ROOT/font/builds/variable/Nagosi[wght].ttf" "$ROOT/ios/Fonts/Nagosi-Variable.ttf"

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  Composer, Speller, Suggester, aksharas, candidates, commitWord, tokenize, iast, nepaliRoman, normalize, schemes, skeleton, toAsciiDigits,
+  Composer, Speller, Suggester, aksharas, keyboards, candidates, commitWord, tokenize, iast, nepaliRoman, normalize, schemes, skeleton, toAsciiDigits,
   toDevanagariDigits, toRoman, transliterate, validate, type DictionaryEntry,
 } from "./index.js";
 
@@ -147,5 +147,16 @@ describe("loose Romanized Nepali (type it the way it sounds)", () => {
       expect(commitWord(c.roman, c.composed, sc, sug, sp), c.roman).toBe(c.commit);
       expect(candidates(c.roman, c.composed, sc, sug, sp), c.roman).toEqual(c.candidates);
     }
+  });
+});
+
+describe("Nepali traditional phone layout", () => {
+  const l = keyboards["nepali-traditional"];
+  it("has the traditional key order", () => {
+    expect(l.rows.map((r) => r.map(([t]) => t).join(""))).toEqual(["ञघङझछटठडढण्", "धभचतथगषयउृे", "बकमानजवपिसु", "शहअखदलफ,र"]);
+  });
+  it("types only Devanagari and punctuation, never a Latin letter", () => {
+    for (const row of [...l.rows, [...l.bottom]]) for (const [tap, hold] of row) expect(tap + hold).not.toMatch(/[A-Za-z]/);
+    for (const [tap, hold] of l.rows.flat()) expect(tap).not.toBe(hold);
   });
 });

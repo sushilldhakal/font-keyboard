@@ -4,13 +4,14 @@
  * - roman: QWERTY keys labelled with the Devanagari each one types. Hold a key for the related
  *   letters (hold d for द ध ड ढ, hold a for आ), so retroflex letters, long vowels and ष are one
  *   press away without learning capitals.
- * - letters: every Devanagari letter and sign on its own key, typed as is. Two pages: consonants
- *   with vowel signs, then vowels, digits and Sanskrit signs. Suggestions follow the word at the caret.
+ * - traditional: the Nepali traditional phone layout (engine/keyboards/nepali-traditional.json).
+ *   Every key types its Devanagari letter directly; hold a key, or press ⇧ first, for the small letter
+ *   in its corner (क → क्ष, ि → ी). १२३ opens digits and symbols. Suggestions follow the word at the caret.
  * - inscript: the standard INSCRIPT layout.
  *
- * The 'कख' / 'abc' key switches between the romanized keys and the letter keys.
+ * The 'कख' / 'abc' key switches between the romanized keys and the traditional keys.
  */
-import { layouts } from "@nagosi/engine";
+import { keyboards, layouts, type PhoneKey } from "@nagosi/engine";
 import type { NagosiInput } from "./input.js";
 
 const QWERTY = [
@@ -50,25 +51,9 @@ export const ROMAN_MORE: Record<string, [string, string][]> = {
   y: [["ञ", "yn"]],
 };
 
-/** Letter keyboard pages. Each key types its label. */
-export const LETTER_PAGES: string[][][] = [
-  [
-    ["ा", "ि", "ी", "ु", "ू", "ृ", "े", "ै", "ो", "ौ"],
-    ["क", "ख", "ग", "घ", "ङ", "च", "छ", "ज", "झ", "ञ"],
-    ["ट", "ठ", "ड", "ढ", "ण", "त", "थ", "द", "ध", "न"],
-    ["प", "फ", "ब", "भ", "म", "य", "र", "ल", "व", "श"],
-    ["ष", "स", "ह", "क्ष", "त्र", "ज्ञ", "्", "ं", "ँ"],
-  ],
-  [
-    ["अ", "आ", "इ", "ई", "उ", "ऊ", "ऋ", "ए", "ऐ", "ओ"],
-    ["औ", "अं", "अः", "ः", "ऽ", "ॐ", "।", "॥", "ॠ", "ळ"],
-    ["१", "२", "३", "४", "५", "६", "७", "८", "९", "०"],
-    ["श्र", "द्ध", "द्य", "द्व", "ह्म", "ट्ट", "र्", "़", "ॄ", "?"],
-    [",", ".", "!", "-", "(", ")", "\"", "'", "/"],
-  ],
-];
+const TRADITIONAL = keyboards["nepali-traditional"];
 
-export type KeyboardLayout = "roman" | "inscript" | "letters";
+export type KeyboardLayout = "roman" | "inscript" | "traditional";
 
 export interface KeyboardOptions {
   layout?: KeyboardLayout;
@@ -81,15 +66,16 @@ export class OnScreenKeyboard {
   private input: NagosiInput;
   private shift = false;
   private layout: KeyboardLayout;
-  /** The romanized layout to return to from the letter keys. */
+  /** The romanized layout to return to from the traditional keys. */
   private typing: "roman" | "inscript";
+  /** Traditional layout: 0 letters, 1 digits and symbols. */
   private page = 0;
   private holdDelay: number;
   private popup: HTMLElement | null = null;
 
   constructor(container: HTMLElement, input: NagosiInput, opts: KeyboardOptions = {}) {
     this.input = input;
-    this.layout = opts.layout ?? "roman";
+    this.layout = opts.layout ?? "traditional";
     this.typing = this.layout === "inscript" ? "inscript" : "roman";
     this.holdDelay = opts.holdDelay ?? 380;
     this.root = document.createElement("div");
@@ -106,20 +92,18 @@ export class OnScreenKeyboard {
 
   setLayout(layout: KeyboardLayout): void {
     this.layout = layout;
-    if (layout !== "letters") this.typing = layout;
+    if (layout !== "traditional") this.typing = layout;
     this.page = 0;
     this.shift = false;
     this.render();
   }
 
   private rows(): string[][] {
-    if (this.layout === "letters") return LETTER_PAGES[this.page];
     if (this.layout === "inscript") return layouts.inscript.rows;
     return QWERTY;
   }
 
   private label(k: string): string {
-    if (this.layout === "letters") return k;
     if (this.layout === "inscript") {
       const key = this.shift ? layouts.inscript.shiftOf[k] ?? k : k;
       return layouts.inscript.keys[key] ?? key;
@@ -129,7 +113,6 @@ export class OnScreenKeyboard {
   }
 
   private char(k: string): string {
-    if (this.layout === "letters") return k;
     if (this.layout === "inscript") return this.shift ? layouts.inscript.shiftOf[k] ?? k : k;
     return this.shift ? k.toUpperCase() : k;
   }
@@ -228,25 +211,87 @@ export class OnScreenKeyboard {
     return b;
   }
 
+  /** A traditional key: tap types its letter, hold (or ⇧ then tap) types the corner letter. */
+  private phoneKey([tap, hold]: PhoneKey, cls = ""): HTMLButtonElement {
+    const shown = this.shift && hold ? hold : tap;
+    const corner = this.shift ? (hold ? tap : "") : hold;
+    let fired = false; // the hold already typed the corner letter: ignore the click that follows
+    const b = this.button(shown, cls, hold ? `${tap}, hold for ${hold}` : tap, () => {
+      if (fired) { fired = false; return; }
+      this.input.insert(shown);
+      if (this.shift) { this.shift = false; this.render(); }
+    }, corner || undefined);
+    b.classList.add("phone");
+    if (hold) {
+      const other = this.shift ? tap : hold;
+      const typeOther = () => {
+        fired = true;
+        this.input.el.focus();
+        this.input.insert(other);
+        if (this.shift) { this.shift = false; this.render(); }
+      };
+      let timer = 0;
+      b.addEventListener("pointerdown", () => {
+        fired = false;
+        clearTimeout(timer);
+        timer = window.setTimeout(typeOther, this.holdDelay);
+      });
+      for (const ev of ["pointerup", "pointerleave", "pointercancel"]) b.addEventListener(ev, () => clearTimeout(timer));
+      b.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        clearTimeout(timer);
+        typeOther();
+      });
+    }
+    return b;
+  }
+
+  private renderTraditional(): void {
+    const rows = this.page === 0 ? TRADITIONAL.rows : TRADITIONAL.numbers;
+    rows.forEach((row, ri) => {
+      const r = document.createElement("div");
+      r.className = "nagosi-row";
+      const last = ri === rows.length - 1;
+      if (last && this.page === 0) {
+        r.append(this.button("⇧", "wide" + (this.shift ? " on" : ""), "Shift: corner letters", () => { this.shift = !this.shift; this.render(); }));
+      }
+      for (const k of row) r.append(this.phoneKey(k));
+      if (last) r.append(this.button("⌫", "wide", "Backspace", () => this.input.backspace()));
+      this.root.append(r);
+    });
+    const bottom = document.createElement("div");
+    bottom.className = "nagosi-row";
+    const [dot, danda] = TRADITIONAL.bottom;
+    bottom.append(
+      this.button(this.page === 0 ? "१२३" : "कख", "wide", this.page === 0 ? "Digits and symbols" : "Letters", () => { this.page = 1 - this.page; this.shift = false; this.render(); }),
+      this.button("abc", "wide", "Romanized keys", () => this.setLayout(this.typing)),
+      this.phoneKey(dot),
+      this.button("space", "space", "Space", () => this.input.insert(" ")),
+      this.phoneKey(danda),
+      this.button("↵", "wide", "Enter", () => this.input.insert("\n")),
+    );
+    this.root.append(bottom);
+  }
+
   private render(): void {
     this.closePopup();
     this.root.replaceChildren();
     this.root.dataset.layout = this.layout;
+    if (this.layout === "traditional") {
+      this.renderTraditional();
+      return;
+    }
     const rows = this.rows();
     for (const [ri, row] of rows.entries()) {
       const r = document.createElement("div");
       r.className = "nagosi-row";
       const last = ri === rows.length - 1;
-      if (last && this.layout !== "letters") {
+      if (last) {
         r.append(this.button("⇧", "wide" + (this.shift ? " on" : ""), "Shift", () => { this.shift = !this.shift; this.render(); }));
       }
       for (const k of row) {
         const ch = this.char(k);
         const lbl = this.label(k);
-        if (this.layout === "letters") {
-          r.append(this.button(lbl, "", lbl, () => this.input.insert(ch)));
-          continue;
-        }
         const more = this.layout === "roman" && !this.shift ? ROMAN_MORE[k] : undefined;
         r.append(this.button(lbl, "", `${lbl} (${ch})`, () => {
           this.input.key(ch);
@@ -258,21 +303,12 @@ export class OnScreenKeyboard {
     }
     const bottom = document.createElement("div");
     bottom.className = "nagosi-row";
-    if (this.layout === "letters") {
-      bottom.append(
-        this.button("abc", "wide", "Romanized keys", () => this.setLayout(this.typing)),
-        this.button(this.page === 0 ? "अ१" : "कख", "wide", this.page === 0 ? "Vowels and digits" : "Consonants", () => { this.page = 1 - this.page; this.render(); }),
-        this.button("space", "space", "Space", () => this.input.insert(" ")),
-        this.button("↵", "wide", "Enter", () => this.input.insert("\n")),
-      );
-    } else {
-      bottom.append(
-        this.button("कख", "wide", "Devanagari letter keys", () => this.setLayout("letters")),
-        this.button("।", "", "Danda", () => this.input.key(this.layout === "inscript" ? ">" : "|")),
-        this.button("space", "space", "Space", () => this.input.key(" ")),
-        this.button("↵", "wide", "Enter", () => this.input.key("\n")),
-      );
-    }
+    bottom.append(
+      this.button("कख", "wide", "Nepali traditional keys", () => this.setLayout("traditional")),
+      this.button("।", "", "Danda", () => this.input.key(this.layout === "inscript" ? ">" : "|")),
+      this.button("space", "space", "Space", () => this.input.key(" ")),
+      this.button("↵", "wide", "Enter", () => this.input.key("\n")),
+    );
     this.root.append(bottom);
   }
 }
