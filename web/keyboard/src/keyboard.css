@@ -35,12 +35,17 @@
 .nagosi-key.phone .nagosi-key-sub {
   position: absolute; top: 4px; right: 5px; font: 11px "Nagosi", "Noto Serif Devanagari", serif; color: var(--nk-sub);
 }
-.nagosi-kbd[data-layout="traditional"] .nagosi-row { gap: 4px; }
-.nagosi-kbd[data-layout="traditional"] .nagosi-key { height: 48px; }
+.nagosi-kbd[data-kind="phone"] .nagosi-row { gap: 4px; }
+.nagosi-kbd[data-kind="phone"] .nagosi-key { height: 48px; }
+/* Space bar keyboard switcher: ‹ name › */
+.nagosi-key.switcher { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.nagosi-key.switcher .nagosi-key-main { font-size: 14px; line-height: 1.6; color: var(--nk-ink); white-space: nowrap; }
+.nagosi-arrow { font-size: 22px; line-height: 1; color: var(--nk-sub); padding: 8px 8px; cursor: pointer; }
 @media (max-width: 480px) {
-  .nagosi-kbd[data-layout="traditional"] { padding: 6px 3px; }
-  .nagosi-kbd[data-layout="traditional"] .nagosi-row { gap: 3px; }
-  .nagosi-kbd[data-layout="traditional"] .nagosi-key { height: 44px; border-radius: 6px; }
+  .nagosi-kbd[data-kind="phone"] { padding: 6px 3px; }
+  .nagosi-kbd[data-kind="phone"] .nagosi-row { gap: 3px; }
+  .nagosi-kbd[data-kind="phone"] .nagosi-key { height: 44px; border-radius: 6px; }
+  .nagosi-key.switcher .nagosi-key-main { font-size: 12px; }
   .nagosi-key.phone .nagosi-key-main { font-size: 19px; padding-top: 8px; }
   .nagosi-key.phone .nagosi-key-sub { font-size: 9px; top: 1px; right: 2px; line-height: 1; }
 }

@@ -20,8 +20,8 @@ ts += `export interface Layout {\n  id: string;\n  name: string;\n  description:
 ts += `export const layouts: Record<string, Layout> = ${JSON.stringify(Object.fromEntries(layouts.map((l) => [l.id, l])))};\n\n`;
 const kdir = join(here, "..", "keyboards");
 const keyboards = readdirSync(kdir).filter((f) => f.endsWith(".json")).sort().map((f) => JSON.parse(readFileSync(join(kdir, f), "utf8")));
-ts += `/** A phone key: [tap, hold or Shift] ("" when the key has no second letter). */\nexport type PhoneKey = [tap: string, hold: string];\n\n`;
-ts += `export interface PhoneLayout {\n  id: string;\n  name: string;\n  description: string;\n  rows: PhoneKey[][];\n  bottom: PhoneKey[];\n  numbers: PhoneKey[][];\n}\n\n`;
+ts += `/** A phone key: [tap, hold, shift] (hold "" when none; shift defaults to hold). */\nexport type PhoneKey = [tap: string, hold: string, shift?: string];\n\n`;
+ts += `export interface PhoneLayout {\n  id: string;\n  name: string;\n  description: string;\n  rows: PhoneKey[][];\n  bottom: PhoneKey[];\n  numbers: PhoneKey[][];\n  /** "hold": ⇧ shows every key's hold letter; "explicit": only keys with a shift value change. */\n  shift: "hold" | "explicit";\n}\n\n`;
 ts += `export const keyboards: Record<string, PhoneLayout> = ${JSON.stringify(Object.fromEntries(keyboards.map((k) => [k.id, k])))};\n\n`;
 ts += `export const schemes: Record<string, Scheme> = { ${schemes.map((s) => `"${s.id}": ${camel(s.id)}`).join(", ")} };\n`;
 writeFileSync(join(here, "..", "transliteration", "schemes.ts"), ts);

@@ -49,14 +49,15 @@ class SetupActivity : Activity() {
             text = "Choose keyboard"
             setOnClickListener { (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker() }
         })
-        col.addView(text("3. Input style", 18f, bold = true))
+        col.addView(text("3. Keyboard (switch any time with ‹ › on the space bar)", 18f, bold = true))
         val group = RadioGroup(this)
         val options = listOf(
-            "nepali-roman" to "Romanized Nepali: namaste → नमस्ते",
-            "iast" to "IAST (Sanskrit): saṃskṛtam → संस्कृतम्",
-            "inscript" to "INSCRIPT: one key, one letter",
+            "nepali-traditional" to "नेपाली: traditional keys, one key one letter",
+            "nepali-roman" to "नेपाली (Roman): type as it sounds, dhakal → ढकाल",
+            "vedic" to "वैदिक: Vedic Sanskrit with svara marks",
+            "iast" to "Sanskrit (IAST): saṃskṛtam → संस्कृतम्",
         )
-        val current = prefs.getString(NagosiIme.KEY_SCHEME, "nepali-roman")
+        val current = Keyboards.byId(prefs.getString(NagosiIme.KEY_KEYBOARD, null)).id
         options.forEachIndexed { i, (id, label) ->
             group.addView(RadioButton(this).apply {
                 this.id = 1000 + i
@@ -66,7 +67,7 @@ class SetupActivity : Activity() {
             })
         }
         group.setOnCheckedChangeListener { _, checkedId ->
-            prefs.edit().putString(NagosiIme.KEY_SCHEME, options[checkedId - 1000].first).apply()
+            prefs.edit().putString(NagosiIme.KEY_KEYBOARD, options[checkedId - 1000].first).apply()
         }
         col.addView(group)
         col.addView(text("Try it", 18f, bold = true))

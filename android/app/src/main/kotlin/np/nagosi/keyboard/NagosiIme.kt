@@ -48,15 +48,16 @@ class NagosiIme : InputMethodService() {
         composer = Composer(scheme(romanSchemeId()))
     }
 
-    /** INSCRIPT has no composing scheme; keep the last roman one ready for when the user switches back. */
-    private fun romanSchemeId(): String = currentSchemeId().takeIf { it != "inscript" } ?: "nepali-roman"
+    /** The keyboard on screen (space-bar arrows switch it); saved across fields. */
+    private fun currentKeyboard(): KeyboardChoice = Keyboards.byId(prefs.getString(KEY_KEYBOARD, null))
 
-    private fun currentSchemeId(): String = prefs.getString(KEY_SCHEME, "nepali-roman") ?: "nepali-roman"
+    /** Roman scheme for typed (and on-screen roman) keys on the current keyboard. */
+    private fun romanSchemeId(): String = Keyboards.romanScheme(currentKeyboard())
 
     private fun scheme(id: String): Scheme = schemes.getOrPut(id) { NagosiAssets.scheme(this, id) }
 
     private fun dictionary(): Suggester {
-        val lang = if (currentSchemeId() == "nepali-roman") "ne" else "sa"
+        val lang = currentKeyboard().lang
         return dictionaries.getOrPut(lang) {
             NagosiAssets.dictionary(this, lang).also { s ->
                 prefs.getString("learned_$lang", null)?.let { json ->
@@ -73,17 +74,17 @@ class NagosiIme : InputMethodService() {
             override fun onInsert(text: String) = insert(text)
             override fun onBackspace() = backspace()
             override fun onSuggestion(word: String) = choose(word)
-            override fun onSwitchScheme() = cycleScheme()
             override fun onNextKeyboard() = switchToNextInputMethodCompat()
             override fun onEnter() = enter()
-            override fun onLayout(traditional: Boolean) {
+            override fun onSwitch(choice: KeyboardChoice) {
                 commitComposing()
-                prefs.edit().putBoolean(KEY_TRADITIONAL, traditional).apply()
+                prefs.edit().putString(KEY_KEYBOARD, choice.id).apply()
+                composer.scheme = scheme(romanSchemeId())
+                updateSuggestions()
             }
         })
         keyboard = view
-        view.traditional = prefs.getBoolean(KEY_TRADITIONAL, true)
-        view.setScheme(currentSchemeId())
+        view.keyboard = currentKeyboard()
         return view
     }
 
@@ -94,7 +95,7 @@ class NagosiIme : InputMethodService() {
         keepStrict = false
         direct = false
         composer.scheme = scheme(romanSchemeId()) // the setup screen may have changed it
-        keyboard?.setScheme(currentSchemeId())
+        keyboard?.keyboard = currentKeyboard()
     }
 
     override fun onFinishInput() {
@@ -103,15 +104,16 @@ class NagosiIme : InputMethodService() {
         super.onFinishInput()
     }
 
+    override fun onDestroy() {
+        keyboard?.release()
+        super.onDestroy()
+    }
+
     // ---------------------------------------------------------------- editing
     private fun type(ch: String) {
         val ic = currentInputConnection ?: return
         autoPick = null
         direct = false
-        if (currentSchemeId() == "inscript") {
-            ic.commitText(NagosiAssets.inscript(this)[ch] ?: ch, 1)
-            return
-        }
         if (ch in Composer.COMMIT_KEYS) {
             val roman = composer.buffer
             val composing = composer.composing
@@ -224,15 +226,6 @@ class NagosiIme : InputMethodService() {
         )
     }
 
-    private fun cycleScheme() {
-        commitComposing()
-        val order = listOf("nepali-roman", "iast", "inscript")
-        val next = order[(order.indexOf(currentSchemeId()) + 1) % order.size]
-        prefs.edit().putString(KEY_SCHEME, next).apply()
-        if (next != "inscript") composer.scheme = scheme(next)
-        keyboard?.setScheme(next)
-    }
-
     private fun switchToNextInputMethodCompat() {
         if (Build.VERSION.SDK_INT >= 28) {
             switchToNextInputMethod(false)
@@ -266,7 +259,6 @@ class NagosiIme : InputMethodService() {
 
     companion object {
         const val PREFS = "nagosi"
-        const val KEY_SCHEME = "scheme"
-        const val KEY_TRADITIONAL = "traditional"
+        const val KEY_KEYBOARD = "keyboard"
     }
 }

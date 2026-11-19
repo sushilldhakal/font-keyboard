@@ -67,8 +67,9 @@ describe("Nagosi Type Studio", () => {
     sel.dispatchEvent(new win.Event("change"));
     doc.getElementById("kbd-toggle").click();
     expect(doc.getElementById("kbd").hidden).toBe(false);
-    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("traditional"); // the default
-    doc.querySelector('#kbd .nagosi-key[aria-label="Romanized keys"]').click();
+    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("nepali-traditional"); // the default
+    doc.querySelector("#kbd .nagosi-arrow.next").click(); // space bar › → नेपाली (Roman)
+    expect(doc.querySelector("#kbd .switcher .nagosi-key-main").textContent).toBe("नेपाली (Roman)");
     ta.value = "";
     ta.setSelectionRange(0, 0);
     const key = (c) => [...doc.querySelectorAll(".nagosi-key")].find((b) => b.querySelector(".nagosi-key-sub")?.textContent === c);
@@ -90,7 +91,7 @@ describe("Nagosi Type Studio", () => {
           const k = keys[i];
           const label = k.querySelector(".nagosi-key-main").textContent;
           k.click();
-          doc.querySelector('#kbd .nagosi-key[aria-label="Space"]').click();
+          doc.querySelector('#kbd .nagosi-key.space .nagosi-key-main').click();
           const out = ta.value.trim();
           expect(out, `${scheme} ${shifted ? "shift+" : ""}${k.querySelector(".nagosi-key-sub").textContent}`).not.toMatch(/[A-Za-z]/);
           if (scheme === "nepali-roman" && !/[\u093E-\u094C\u0902\u0903]/.test(label)) expect(out, "label matches output").toBe(label);
@@ -157,15 +158,19 @@ describe("typing a name like ढकाल, three ways", () => {
   it("the Nepali traditional keys: tap for the letter, hold or Shift for the corner letter", () => {
     clear();
     const kbdKey = (t) => [...doc.querySelectorAll("#kbd .nagosi-key")].find((b) => b.querySelector(".nagosi-key-main")?.textContent === t);
-    kbdKey("कख").click();
-    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("traditional");
+    const goTo = (label) => {
+      for (let i = 0; i < 6 && doc.querySelector("#kbd .switcher .nagosi-key-main").textContent !== label; i++) doc.querySelector("#kbd .nagosi-arrow.next").click();
+      expect(doc.querySelector("#kbd .switcher .nagosi-key-main").textContent).toBe(label);
+    };
+    goTo("नेपाली");
+    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("nepali-traditional");
     const rows = [...doc.querySelectorAll("#kbd .nagosi-row")].map((r) => [...r.querySelectorAll(".nagosi-key.phone .nagosi-key-main")].map((m) => m.textContent).join(""));
     expect(rows.slice(0, 4)).toEqual(["ञघङझछटठडढण्", "धभचतथगषयउृे", "बकमानजवपिसु", "शहअखदलफ,र"]);
     for (const t of ["ढ", "क", "ा"]) kbdKey(t).click();
     expect(chips()).toContain("ढकाल");
     kbdKey("ल").click();
     expect(ta.value).toBe("ढकाल");
-    kbdKey("space").click();
+    doc.querySelector('#kbd .nagosi-key.space .nagosi-key-main').click();
     // hold क → क्ष; ⇧ then ि → ी
     kbdKey("क").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
     kbdKey("ि").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
@@ -178,7 +183,26 @@ describe("typing a name like ढकाल, three ways", () => {
     kbdKey("५").click();
     expect(ta.value).toBe("ढकाल क्षीत्र५");
     kbdKey("कख").click();
-    kbdKey("abc").click();
-    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("roman");
+    // वैदिक: vowels, varga consonants, svara marks; ⇧ turns vowels into signs
+    goTo("वैदिक");
+    expect(doc.getElementById("lang").value).toBe("sa");
+    const vrows = [...doc.querySelectorAll("#kbd .nagosi-row")].map((r) => [...r.querySelectorAll(".nagosi-key.phone .nagosi-key-main")].map((m) => m.textContent).join(" "));
+    expect(vrows[0]).toBe("अं अ आ क च ट त प य श");
+    expect(vrows[4]).toBe("ᳵ ३ ङ ञ ण न म ॐ");
+    clear();
+    kbdKey("ग").click();
+    kbdKey("⇧").click();
+    kbdKey("ि").click(); // shifted इ
+    kbdKey("र").click();
+    kbdKey("॑").click(); // udatta
+    expect(ta.value).toBe("गिर॑");
+    // ‹ goes back; IAST is a roman keyboard
+    goTo("Sanskrit (IAST)");
+    expect(doc.getElementById("scheme").value).toBe("iast");
+    doc.querySelector("#kbd .nagosi-arrow.prev").click();
+    expect(doc.querySelector("#kbd .switcher .nagosi-key-main").textContent).toBe("वैदिक");
+    goTo("नेपाली (Roman)");
+    expect(doc.getElementById("scheme").value).toBe("nepali-roman");
+    expect(doc.getElementById("lang").value).toBe("ne");
   });
 });

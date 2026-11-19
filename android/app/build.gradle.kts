@@ -48,4 +48,6 @@ tasks.named("preBuild") { dependsOn(syncNagosiAssets) }
 
 dependencies {
     implementation(project(":engine"))
+    // Handwriting: on-device Nepali ink recognition. The model (~20 MB) is downloaded once, then works offline.
+    implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
 }

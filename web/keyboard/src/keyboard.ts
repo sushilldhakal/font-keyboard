@@ -1,18 +1,18 @@
 /**
  * On-screen keyboard for NagosiInput.
  *
- * - roman: QWERTY keys labelled with the Devanagari each one types. Hold a key for the related
- *   letters (hold d for द ध ड ढ, hold a for आ), so retroflex letters, long vowels and ष are one
- *   press away without learning capitals.
- * - traditional: the Nepali traditional phone layout (engine/keyboards/nepali-traditional.json).
- *   Every key types its Devanagari letter directly; hold a key, or press ⇧ first, for the small letter
- *   in its corner (क → क्ष, ि → ी). १२३ opens digits and symbols. Suggestions follow the word at the caret.
- * - inscript: the standard INSCRIPT layout.
- *
- * The 'कख' / 'abc' key switches between the romanized keys and the traditional keys.
+ * Several keyboards, switched with the ‹ › arrows on the space bar (or by swiping along it):
+ * - नेपाली: the Nepali traditional phone layout (engine/keyboards/nepali-traditional.json). Every key
+ *   types its Devanagari letter; hold a key, or press ⇧ first, for the small letter in its corner.
+ * - नेपाली (Roman): QWERTY keys typed as Romanized Nepali ("dhakal" → ढकाल). Hold a key for related
+ *   letters (d → ध ड ढ).
+ * - वैदिक: the Vedic Sanskrit layout (engine/keyboards/vedic.json): vowels, varga-ordered consonants,
+ *   svara marks; ⇧ turns the vowels into their signs.
+ * - Sanskrit (IAST): QWERTY keys typed as IAST.
+ * १२३ opens digits and symbols on the letter keyboards. Suggestions follow the word being typed.
  */
-import { keyboards, layouts, type PhoneKey } from "@nagosi/engine";
-import type { NagosiInput } from "./input.js";
+import { keyboards, layouts, type PhoneKey, type PhoneLayout } from "@nagosi/engine";
+import type { NagosiInput, SchemeId } from "./input.js";
 
 const QWERTY = [
   ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
@@ -51,14 +51,33 @@ export const ROMAN_MORE: Record<string, [string, string][]> = {
   y: [["ञ", "yn"]],
 };
 
-const TRADITIONAL = keyboards["nepali-traditional"];
+export interface KeyboardChoice {
+  /** Keyboard id: a phone layout in engine/keyboards, or a roman scheme. */
+  id: string;
+  /** Name on the space bar. */
+  label: string;
+  kind: "phone" | "roman";
+  /** Dictionary language for suggestions. */
+  lang: "ne" | "sa";
+}
 
-export type KeyboardLayout = "roman" | "inscript" | "traditional";
+/** The keyboards the space bar cycles through, in order. Shared with Android and iOS. */
+export const KEYBOARDS: KeyboardChoice[] = [
+  { id: "nepali-traditional", label: "नेपाली", kind: "phone", lang: "ne" },
+  { id: "nepali-roman", label: "नेपाली (Roman)", kind: "roman", lang: "ne" },
+  { id: "vedic", label: "वैदिक", kind: "phone", lang: "sa" },
+  { id: "iast", label: "Sanskrit (IAST)", kind: "roman", lang: "sa" },
+];
+
+export type KeyboardLayout = string; // a KEYBOARDS id, or "inscript"
 
 export interface KeyboardOptions {
+  /** Starting keyboard (a KEYBOARDS id or "inscript"); default नेपाली. */
   layout?: KeyboardLayout;
-  /** Milliseconds to hold a key before its extra letters open (default 380). */
+  /** Milliseconds to hold a key before its second letter (default 380). */
   holdDelay?: number;
+  /** Called when the user switches keyboard with the space bar, e.g. to change the dictionary. */
+  onSwitch?: (choice: KeyboardChoice) => void;
 }
 
 export class OnScreenKeyboard {
@@ -66,23 +85,23 @@ export class OnScreenKeyboard {
   private input: NagosiInput;
   private shift = false;
   private layout: KeyboardLayout;
-  /** The romanized layout to return to from the traditional keys. */
-  private typing: "roman" | "inscript";
-  /** Traditional layout: 0 letters, 1 digits and symbols. */
+  /** Letter keyboards: 0 letters, 1 digits and symbols. */
   private page = 0;
   private holdDelay: number;
   private popup: HTMLElement | null = null;
+  private onSwitch?: (choice: KeyboardChoice) => void;
 
   constructor(container: HTMLElement, input: NagosiInput, opts: KeyboardOptions = {}) {
     this.input = input;
-    this.layout = opts.layout ?? "traditional";
-    this.typing = this.layout === "inscript" ? "inscript" : "roman";
+    this.layout = opts.layout ?? "nepali-traditional";
     this.holdDelay = opts.holdDelay ?? 380;
+    this.onSwitch = opts.onSwitch;
     this.root = document.createElement("div");
     this.root.className = "nagosi-kbd";
     this.root.setAttribute("role", "group");
     this.root.setAttribute("aria-label", "On-screen Nepali keyboard");
     container.append(this.root);
+    this.applyScheme();
     this.render();
   }
 
@@ -90,17 +109,40 @@ export class OnScreenKeyboard {
     return this.layout;
   }
 
+  private get choice(): KeyboardChoice | undefined {
+    return KEYBOARDS.find((k) => k.id === this.layout);
+  }
+
+  private get phone(): PhoneLayout | undefined {
+    return this.choice?.kind === "phone" ? keyboards[this.layout] : undefined;
+  }
+
+  /** Show a keyboard without changing the input scheme (the host already set it). */
   setLayout(layout: KeyboardLayout): void {
     this.layout = layout;
-    if (layout !== "traditional") this.typing = layout;
     this.page = 0;
     this.shift = false;
     this.render();
   }
 
-  private rows(): string[][] {
-    if (this.layout === "inscript") return layouts.inscript.rows;
-    return QWERTY;
+  /** Switch keyboard as the space-bar arrows do: also sets the input scheme and tells the host. */
+  switchTo(id: string): void {
+    this.input.reset();
+    this.setLayout(id);
+    this.applyScheme();
+    const c = this.choice;
+    if (c) this.onSwitch?.(c);
+  }
+
+  /** Next (+1) or previous (-1) keyboard in KEYBOARDS. */
+  cycle(step: 1 | -1): void {
+    const i = KEYBOARDS.findIndex((k) => k.id === this.layout);
+    this.switchTo(KEYBOARDS[(i + step + KEYBOARDS.length) % KEYBOARDS.length].id);
+  }
+
+  private applyScheme() {
+    const c = this.choice;
+    if (c?.kind === "roman") this.input.setScheme(c.id as SchemeId);
   }
 
   private label(k: string): string {
@@ -109,6 +151,7 @@ export class OnScreenKeyboard {
       return layouts.inscript.keys[key] ?? key;
     }
     if (/[0-9]/.test(k)) return "०१२३४५६७८९"[+k];
+    if (this.layout === "iast") return this.shift ? k.toUpperCase() : k;
     return ROMAN_HINT[this.shift ? k.toUpperCase() : k] ?? k;
   }
 
@@ -137,7 +180,6 @@ export class OnScreenKeyboard {
       b.className = "nagosi-key";
       b.setAttribute("role", "menuitem");
       b.setAttribute("aria-label", `${label} (${keys})`);
-      b.innerHTML = "";
       const m = document.createElement("span");
       m.className = "nagosi-key-main";
       m.textContent = label;
@@ -211,10 +253,11 @@ export class OnScreenKeyboard {
     return b;
   }
 
-  /** A traditional key: tap types its letter, hold (or ⇧ then tap) types the corner letter. */
-  private phoneKey([tap, hold]: PhoneKey, cls = ""): HTMLButtonElement {
-    const shown = this.shift && hold ? hold : tap;
-    const corner = this.shift ? (hold ? tap : "") : hold;
+  /** A letter key: tap types its letter, hold types the corner letter, ⇧ shows the shift letter. */
+  private phoneKey([tap, hold, shiftTo]: PhoneKey, cls = ""): HTMLButtonElement {
+    const alt = shiftTo || (this.phone?.shift === "explicit" ? "" : hold);
+    const shown = this.shift && alt ? alt : tap;
+    const corner = this.shift ? (alt ? tap : hold) : hold;
     let fired = false; // the hold already typed the corner letter: ignore the click that follows
     const b = this.button(shown, cls, hold ? `${tap}, hold for ${hold}` : tap, () => {
       if (fired) { fired = false; return; }
@@ -223,7 +266,7 @@ export class OnScreenKeyboard {
     }, corner || undefined);
     b.classList.add("phone");
     if (hold) {
-      const other = this.shift ? tap : hold;
+      const other = this.shift && alt ? tap : hold;
       const typeOther = () => {
         fired = true;
         this.input.el.focus();
@@ -246,14 +289,55 @@ export class OnScreenKeyboard {
     return b;
   }
 
-  private renderTraditional(): void {
-    const rows = this.page === 0 ? TRADITIONAL.rows : TRADITIONAL.numbers;
+  /** Space bar: ‹ name ›. The arrows (or a swipe along the bar) switch keyboard; the middle types a space. */
+  private spaceBar(type: () => void): HTMLButtonElement {
+    const c = this.choice;
+    if (!c) return this.button("space", "space", "Space", type);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "nagosi-key space switcher";
+    b.setAttribute("aria-label", `Space. Keyboard: ${c.label}. Use the arrows to switch.`);
+    const prev = document.createElement("span");
+    prev.className = "nagosi-arrow prev";
+    prev.textContent = "‹";
+    prev.setAttribute("role", "button");
+    prev.setAttribute("aria-label", "Previous keyboard");
+    const name = document.createElement("span");
+    name.className = "nagosi-key-main";
+    name.textContent = c.label;
+    const next = document.createElement("span");
+    next.className = "nagosi-arrow next";
+    next.textContent = "›";
+    next.setAttribute("role", "button");
+    next.setAttribute("aria-label", "Next keyboard");
+    b.append(prev, name, next);
+    let startX = 0;
+    let swiped = false;
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    b.addEventListener("pointerdown", (e) => { startX = e.clientX; swiped = false; });
+    b.addEventListener("pointerup", (e) => {
+      const dx = e.clientX - startX;
+      if (Math.abs(dx) > 40) { swiped = true; this.cycle(dx > 0 ? -1 : 1); }
+    });
+    b.addEventListener("click", (e) => {
+      if (swiped) { swiped = false; return; }
+      this.input.el.focus();
+      const t = e.target as HTMLElement;
+      if (t.classList.contains("prev")) return this.cycle(-1);
+      if (t.classList.contains("next")) return this.cycle(1);
+      type();
+    });
+    return b;
+  }
+
+  private renderPhone(layout: PhoneLayout): void {
+    const rows = this.page === 0 ? layout.rows : layout.numbers;
     rows.forEach((row, ri) => {
       const r = document.createElement("div");
       r.className = "nagosi-row";
       const last = ri === rows.length - 1;
       if (last && this.page === 0) {
-        r.append(this.button("⇧", "wide" + (this.shift ? " on" : ""), "Shift: corner letters", () => { this.shift = !this.shift; this.render(); }));
+        r.append(this.button("⇧", "wide" + (this.shift ? " on" : ""), "Shift: second letters", () => { this.shift = !this.shift; this.render(); }));
       }
       for (const k of row) r.append(this.phoneKey(k));
       if (last) r.append(this.button("⌫", "wide", "Backspace", () => this.input.backspace()));
@@ -261,12 +345,11 @@ export class OnScreenKeyboard {
     });
     const bottom = document.createElement("div");
     bottom.className = "nagosi-row";
-    const [dot, danda] = TRADITIONAL.bottom;
+    const [left, danda] = layout.bottom;
     bottom.append(
       this.button(this.page === 0 ? "१२३" : "कख", "wide", this.page === 0 ? "Digits and symbols" : "Letters", () => { this.page = 1 - this.page; this.shift = false; this.render(); }),
-      this.button("abc", "wide", "Romanized keys", () => this.setLayout(this.typing)),
-      this.phoneKey(dot),
-      this.button("space", "space", "Space", () => this.input.insert(" ")),
+      this.phoneKey(left),
+      this.spaceBar(() => this.input.insert(" ")),
       this.phoneKey(danda),
       this.button("↵", "wide", "Enter", () => this.input.insert("\n")),
     );
@@ -277,11 +360,13 @@ export class OnScreenKeyboard {
     this.closePopup();
     this.root.replaceChildren();
     this.root.dataset.layout = this.layout;
-    if (this.layout === "traditional") {
-      this.renderTraditional();
+    const phone = this.phone;
+    this.root.dataset.kind = phone ? "phone" : "roman";
+    if (phone) {
+      this.renderPhone(phone);
       return;
     }
-    const rows = this.rows();
+    const rows = this.layout === "inscript" ? layouts.inscript.rows : QWERTY;
     for (const [ri, row] of rows.entries()) {
       const r = document.createElement("div");
       r.className = "nagosi-row";
@@ -292,7 +377,7 @@ export class OnScreenKeyboard {
       for (const k of row) {
         const ch = this.char(k);
         const lbl = this.label(k);
-        const more = this.layout === "roman" && !this.shift ? ROMAN_MORE[k] : undefined;
+        const more = this.layout === "nepali-roman" && !this.shift ? ROMAN_MORE[k] : undefined;
         r.append(this.button(lbl, "", `${lbl} (${ch})`, () => {
           this.input.key(ch);
           if (this.shift) { this.shift = false; this.render(); }
@@ -304,9 +389,9 @@ export class OnScreenKeyboard {
     const bottom = document.createElement("div");
     bottom.className = "nagosi-row";
     bottom.append(
-      this.button("कख", "wide", "Nepali traditional keys", () => this.setLayout("traditional")),
+      this.button(",", "", "Comma", () => this.input.key(",")),
+      this.spaceBar(() => this.input.key(" ")),
       this.button("।", "", "Danda", () => this.input.key(this.layout === "inscript" ? ">" : "|")),
-      this.button("space", "space", "Space", () => this.input.key(" ")),
       this.button("↵", "wide", "Enter", () => this.input.key("\n")),
     );
     this.root.append(bottom);

@@ -2,7 +2,7 @@ import { Speller, Suggester, iast, toRoman, type DictionaryEntry } from "@nagosi
 import bigrams from "@nagosi/engine/dictionaries/bigrams.json";
 import neDict from "@nagosi/engine/dictionaries/ne.json";
 import saDict from "@nagosi/engine/dictionaries/sa.json";
-import { NagosiInput, OnScreenKeyboard, type SchemeId } from "@nagosi/keyboard";
+import { KEYBOARDS, NagosiInput, OnScreenKeyboard, type SchemeId } from "@nagosi/keyboard";
 import stacksTxt from "../../../font/builds/stacks.txt";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -32,7 +32,7 @@ const dictionaries: Record<string, Suggester> = {
 const speller = new Speller(bigrams as Record<string, number>);
 
 const HINTS: Record<string, string> = {
-  "nepali-roman": "Type the way it sounds: <kbd>dhakal</kbd> → ढकाल, <kbd>nepal</kbd> → नेपाल, <kbd>tapai</kbd> → तपाईं. Space takes the best dictionary word; <kbd>Backspace</kbd> right after puts back what you typed. Tap a suggestion for another spelling. To force a letter use capitals (<kbd>T D N Sh</kbd> = ट ड ण ष, <kbd>Dhakaal</kbd>), or hold a key on the on-screen keyboard, or use the on-screen Nepali traditional keys (<b>कख</b>): tap for the big letter, hold for the small one in the corner. <kbd>~</kbd> ँ, <kbd>M</kbd> ं, <kbd>_</kbd> halant, <kbd>.</kbd> ।",
+  "nepali-roman": "Type the way it sounds: <kbd>dhakal</kbd> → ढकाल, <kbd>nepal</kbd> → नेपाल, <kbd>tapai</kbd> → तपाईं. Space takes the best dictionary word; <kbd>Backspace</kbd> right after puts back what you typed. Tap a suggestion for another spelling. To force a letter use capitals (<kbd>T D N Sh</kbd> = ट ड ण ष, <kbd>Dhakaal</kbd>), or hold a key on the on-screen keyboard, or switch the on-screen keyboard with the ‹ › arrows on its space bar: नेपाली (traditional keys: tap for the big letter, hold for the small one), नेपाली (Roman), वैदिक, IAST. <kbd>~</kbd> ँ, <kbd>M</kbd> ं, <kbd>_</kbd> halant, <kbd>.</kbd> ।",
   iast: "Type IAST with diacritics: <kbd>dharmakṣetre</kbd> → धर्मक्षेत्रे, <kbd>saṃskṛtam</kbd> → संस्कृतम्. A final consonant gets a halant. <kbd>|</kbd> । <kbd>||</kbd> ॥",
   itrans: "ITRANS in plain ASCII: <kbd>dharmakShetre</kbd> → धर्मक्षेत्रे, <kbd>raamaH</kbd> → रामः, <kbd>.N</kbd> ँ, <kbd>.h</kbd> halant.",
   "harvard-kyoto": "Harvard-Kyoto in plain ASCII: <kbd>dharmakSetre</kbd> → धर्मक्षेत्रे, <kbd>zivaH</kbd> → शिवः.",
@@ -80,7 +80,19 @@ const input = new NagosiInput(text, {
   speller,
   onChange: (st) => renderSuggestions(st),
 });
-const kbd = new OnScreenKeyboard($("kbd"), input);
+const kbd = new OnScreenKeyboard($("kbd"), input, {
+  // The space bar's ‹ › arrows switch keyboard: keep the scheme menu and the dictionary in step.
+  onSwitch: (c) => {
+    // physical keys follow the keyboard too: Nepali keyboards type Romanized Nepali, Sanskrit ones IAST
+    schemeSel.value = c.kind === "roman" ? c.id : c.lang === "sa" ? "iast" : "nepali-roman";
+    input.setScheme(schemeSel.value as SchemeId);
+    langSel.value = c.lang;
+    input.setSuggester(dictionaries[c.lang]);
+    applyStyle();
+    renderSuggestions();
+  },
+});
+const isPhoneLayout = (id: string) => KEYBOARDS.some((k) => k.id === id && k.kind === "phone");
 $<HTMLButtonElement>("kbd-toggle").addEventListener("click", (e) => {
   const box = $("kbd");
   box.hidden = !box.hidden;
@@ -121,7 +133,7 @@ function applyStyle() {
 
 schemeSel.addEventListener("change", () => {
   input.setScheme(schemeSel.value as SchemeId);
-  if (kbd.currentLayout !== "traditional") kbd.setLayout(schemeSel.value === "inscript" ? "inscript" : "roman");
+  if (!isPhoneLayout(kbd.currentLayout) || schemeSel.value === "inscript") kbd.setLayout(schemeSel.value);
   applyStyle();
   renderSuggestions();
   text.focus();

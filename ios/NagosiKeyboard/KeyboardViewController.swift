@@ -8,15 +8,22 @@ import UIKit
 /// punctuation commits: for loosely typed Romanized Nepali the best dictionary word ("dhakal" →
 /// ढकाल), and a Backspace straight after puts the typed word back. A suggestion tap replaces the
 /// composing word. Backspace removes the last roman key while composing. Hold a roman key for its
-/// related letters (d → ध ड ढ). The default Nepali traditional keys type Devanagari letters directly:
-/// hold a key, or press ⇧ first, for the small letter in its corner; १२३ opens digits.
+/// related letters (d → ध ड ढ). The space bar's ‹ › arrows switch keyboard: नेपाली (traditional
+/// keys, the default: hold or ⇧ for the small letter in a key's corner), नेपाली (Roman), वैदिक
+/// (⇧ turns vowels into signs) and Sanskrit (IAST). १२३ opens digits.
 final class KeyboardViewController: UIInputViewController {
-    private enum Mode: String, CaseIterable { case nepali = "nepali-roman", iast, inscript }
-
-    private var mode: Mode = Mode(rawValue: UserDefaults.standard.string(forKey: "scheme") ?? "") ?? .nepali
+    /// The keyboards the space bar's ‹ › arrows switch between (same list as web KEYBOARDS).
+    private struct Choice { let id: String; let label: String; let phone: Bool; let lang: String }
+    private static let keyboards: [Choice] = [
+        Choice(id: "nepali-traditional", label: "नेपाली", phone: true, lang: "ne"),
+        Choice(id: "nepali-roman", label: "नेपाली (Roman)", phone: false, lang: "ne"),
+        Choice(id: "vedic", label: "वैदिक", phone: true, lang: "sa"),
+        Choice(id: "iast", label: "Sanskrit (IAST)", phone: false, lang: "sa"),
+    ]
+    private var current: Choice = KeyboardViewController.keyboards.first { $0.id == UserDefaults.standard.string(forKey: "keyboard") }
+        ?? KeyboardViewController.keyboards[0]
     private var composer: Composer!
     private var dictionaries: [String: Suggester] = [:]
-    private var inscript: DirectLayout?
     private var shift = false
     private lazy var speller: Speller? = try? Speller.bundled()
     /// Last automatic pick (text committed, roman typed), so an immediate Backspace can undo it.
@@ -25,10 +32,17 @@ final class KeyboardViewController: UIInputViewController {
     private var keepStrict = false
     /// Letters are being typed directly on the कख page.
     private var direct = false
-    /// Nepali traditional keys (default) or romanized keys.
-    private var traditional = UserDefaults.standard.object(forKey: "traditional") as? Bool ?? true
     private var page = 0
-    private lazy var phone: PhoneLayout? = try? PhoneLayout.bundled()
+    /// Handwriting panel open (✍ key).
+    private var writing = false
+    private var pad: HandwritingPad?
+    private var inkWords: [String] = []
+    private var phoneLayouts: [String: PhoneLayout] = [:]
+    private var phone: PhoneLayout? {
+        guard current.phone else { return nil }
+        if phoneLayouts[current.id] == nil { phoneLayouts[current.id] = try? PhoneLayout.bundled(current.id) }
+        return phoneLayouts[current.id]
+    }
     private var popup: UIView?
 
     private let suggestionBar = UIStackView()
@@ -81,7 +95,6 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         composer = Composer(scheme: (try? Scheme.bundled(romanSchemeId)) ?? (try! Scheme.bundled("nepali-roman")))
-        inscript = try? DirectLayout.bundled()
 
         let root = UIStackView(arrangedSubviews: [makeSuggestionScroll(), rowsStack])
         root.axis = .vertical
@@ -111,10 +124,11 @@ final class KeyboardViewController: UIInputViewController {
         updateSuggestions()
     }
 
-    private var romanSchemeId: String { mode == .inscript ? "nepali-roman" : mode.rawValue }
+    /// Roman scheme for the roman keyboards (and hardware keys on the letter keyboards).
+    private var romanSchemeId: String { current.phone ? (current.lang == "sa" ? "iast" : "nepali-roman") : current.id }
 
     private var dictionary: Suggester? {
-        let lang = mode == .nepali ? "ne" : "sa"
+        let lang = current.lang
         if dictionaries[lang] == nil { dictionaries[lang] = try? Suggester.bundled(lang) }
         return dictionaries[lang]
     }
@@ -124,10 +138,6 @@ final class KeyboardViewController: UIInputViewController {
     private func type(_ ch: String) {
         autoPick = nil
         direct = false
-        if mode == .inscript {
-            textDocumentProxy.insertText(inscript?.keys[ch] ?? ch)
-            return
-        }
         if Composer.commitKeys.contains(ch) {
             let roman = composer.buffer
             let composing = composer.composing
@@ -233,14 +243,20 @@ final class KeyboardViewController: UIInputViewController {
         updateSuggestions()
     }
 
-    private func cycleMode() {
+    /// Space-bar arrows: next (+1) or previous (-1) keyboard.
+    private func switchKeyboard(_ step: Int) {
         commitComposing()
-        let all = Mode.allCases
-        mode = all[(all.firstIndex(of: mode)! + 1) % all.count]
-        UserDefaults.standard.set(mode.rawValue, forKey: "scheme")
-        if mode != .inscript, let s = try? Scheme.bundled(mode.rawValue) { composer.scheme = s }
+        let all = Self.keyboards
+        let i = all.firstIndex { $0.id == current.id } ?? 0
+        current = all[(i + step + all.count) % all.count]
+        writing = false
+        pad = nil
+        UserDefaults.standard.set(current.id, forKey: "keyboard")
+        if let s = try? Scheme.bundled(romanSchemeId) { composer.scheme = s }
         shift = false
+        page = 0
         render()
+        updateSuggestions()
     }
 
     // MARK: UI
@@ -264,6 +280,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func updateSuggestions() {
+        if writing { return }
         suggestionBar.arrangedSubviews.forEach { $0.removeFromSuperview() }
         let composing = composer.composing
         var words: [String] = []
@@ -293,12 +310,9 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func label(for key: String) -> (main: String, ch: String) {
-        if mode == .inscript {
-            let k = shift ? (inscript?.shiftOf[key] ?? key) : key
-            return (inscript?.keys[k] ?? k, k)
-        }
         let k = shift ? key.uppercased() : key
         if let d = Int(key) { return (String(Array("०१२३४५६७८९")[d]), key) }
+        if current.id == "iast" { return (k, k) }
         return (Self.romanHint[k] ?? k, k)
     }
 
@@ -306,13 +320,19 @@ final class KeyboardViewController: UIInputViewController {
         popup?.removeFromSuperview()
         popup = nil
         rowsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        heightConstraint?.constant = traditional ? 316 : 300
-        rowsStack.spacing = traditional ? 6 : 8
-        if traditional {
-            renderTraditional()
+        if writing {
+            heightConstraint?.constant = 316
+            renderWriting()
             return
         }
-        let rows = mode == .inscript ? (inscript?.rows ?? Self.qwerty) : Self.qwerty
+        let rowsCount = phone.map { $0.rows.count } ?? 4
+        heightConstraint?.constant = rowsCount > 4 ? 352 : (current.phone ? 316 : 300)
+        rowsStack.spacing = current.phone ? 6 : 8
+        if let phone {
+            renderPhone(phone)
+            return
+        }
+        let rows = Self.qwerty
         for (i, keyRow) in rows.enumerated() {
             var keys: [(UIButton, CGFloat)] = []
             if i == rows.count - 1 {
@@ -327,7 +347,7 @@ final class KeyboardViewController: UIInputViewController {
                     self.type(ch)
                     if self.shift { self.shift = false; self.render() }
                 }
-                if mode == .nepali, !shift, let more = Self.romanMore[key] { addHold(b, more) }
+                if current.id == "nepali-roman", !shift, let more = Self.romanMore[key] { addHold(b, more) }
                 keys.append((b, 1))
             }
             if i == rows.count - 1 {
@@ -337,27 +357,110 @@ final class KeyboardViewController: UIInputViewController {
         }
         var bottom: [(UIButton, CGFloat)] = []
         addGlobe(&bottom)
-        let modeName = mode == .nepali ? "नेपाली" : (mode == .iast ? "IAST" : "INSCRIPT")
-        bottom.append((keyButton(modeName, sub: "") { [weak self] in self?.cycleMode() }, 1.8))
-        bottom.append((keyButton("कख", sub: "") { [weak self] in self?.setTraditional(true) }, 1.2))
-        bottom.append((keyButton("।", sub: "") { [weak self] in self?.type(self?.mode == .inscript ? ">" : "|") }, 1))
-        bottom.append((keyButton("space", sub: "") { [weak self] in self?.type(" ") }, 3.4))
+        bottom.append((keyButton("✍", sub: "") { [weak self] in self?.openWriting() }, 1))
+        bottom.append((keyButton(",", sub: "") { [weak self] in self?.type(",") }, 1))
+        bottom.append((spaceBar(height: 46) { [weak self] in self?.type(" ") }, 4.4))
+        bottom.append((keyButton("।", sub: "") { [weak self] in self?.type("|") }, 1))
         bottom.append((keyButton("↵", sub: "", accent: true) { [weak self] in self?.type("\n") }, 1.6))
         rowsStack.addArrangedSubview(row(bottom, columns: nil))
     }
 
-    private func setTraditional(_ on: Bool) {
+    // MARK: handwriting
+
+    private func openWriting() {
         commitComposing()
-        traditional = on
-        page = 0
-        shift = false
-        UserDefaults.standard.set(on, forKey: "traditional")
+        writing = true
         render()
     }
 
-    private func renderTraditional() {
-        guard let phone else { return }
+    private func closeWriting() {
+        commitInk(nil)
+        writing = false
+        pad = nil
+        render()
+        updateSuggestions()
+    }
+
+    /// Insert a recognised word (the first candidate when nil) and clear the pad.
+    private func commitInk(_ word: String?, then: String = "") {
+        if let w = word ?? inkWords.first, pad?.isEmpty == false { textDocumentProxy.insertText(w + then) }
+        else if !then.isEmpty { textDocumentProxy.insertText(then) }
+        inkWords = []
+        pad?.clear()
+        showInkWords()
+    }
+
+    private func showInkWords() {
+        suggestionBar.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for w in inkWords {
+            var config = UIButton.Configuration.filled()
+            config.baseBackgroundColor = .secondarySystemBackground
+            config.baseForegroundColor = .label
+            config.cornerStyle = .medium
+            var t = AttributedString(w)
+            t.font = font.withSize(19)
+            config.attributedTitle = t
+            let b = UIButton(configuration: config)
+            b.addAction(UIAction { [weak self] _ in self?.commitInk(w) }, for: .touchUpInside)
+            suggestionBar.addArrangedSubview(b)
+        }
+    }
+
+    private func renderWriting() {
+        let p = pad ?? HandwritingPad(lang: current.lang == "sa" ? "sa" : "ne", font: font)
+        pad = p
+        p.onCandidates = { [weak self] words in self?.inkWords = words; self?.showInkWords() }
+        p.onNewWord = { [weak self] in if self?.inkWords.isEmpty == false { self?.commitInk(nil) } }
+        p.heightAnchor.constraint(equalToConstant: 190).isActive = true
+        rowsStack.addArrangedSubview(p)
+        var bottom: [(UIButton, CGFloat)] = []
+        bottom.append((keyButton(current.phone ? "कख" : "abc", sub: "") { [weak self] in self?.closeWriting() }, 1.4))
+        bottom.append((keyButton("खाली ठाउँ", sub: "") { [weak self] in self?.commitInk(nil, then: " ") }, 4.4))
+        bottom.append((keyButton("⌫", sub: "") { [weak self] in
+            guard let self else { return }
+            if self.pad?.isEmpty == false { self.inkWords = []; self.pad?.clear(); self.showInkWords() } else { self.backspace() }
+        }, 1.4))
+        bottom.append((keyButton("↵", sub: "", accent: true) { [weak self] in self?.commitInk(nil); self?.insert("\n") }, 1.5))
+        rowsStack.addArrangedSubview(row(bottom, columns: nil))
+    }
+
+    /// Space bar: ‹ name ›. The arrows (or a swipe along the bar) switch keyboard; the middle types a space.
+    private func spaceBar(height: CGFloat, onSpace: @escaping () -> Void) -> UIButton {
+        let b = keyButton(current.label, sub: "", height: height, action: onSpace)
+        var config = b.configuration
+        var t = AttributedString(current.label)
+        t.font = font.withSize(15)
+        config?.attributedTitle = t
+        b.configuration = config
+        b.accessibilityLabel = "Space. Keyboard \(current.label)"
+        for (text, step, edge) in [("‹", -1, true), ("›", 1, false)] {
+            let a = UIButton(type: .system)
+            a.setTitle(text, for: .normal)
+            a.titleLabel?.font = .systemFont(ofSize: 24)
+            a.tintColor = .secondaryLabel
+            a.accessibilityLabel = step < 0 ? "Previous keyboard" : "Next keyboard"
+            a.translatesAutoresizingMaskIntoConstraints = false
+            a.addAction(UIAction { [weak self] _ in UIDevice.current.playInputClick(); self?.switchKeyboard(step) }, for: .touchUpInside)
+            b.addSubview(a)
+            NSLayoutConstraint.activate([
+                a.topAnchor.constraint(equalTo: b.topAnchor),
+                a.bottomAnchor.constraint(equalTo: b.bottomAnchor),
+                a.widthAnchor.constraint(equalToConstant: 34),
+                edge ? a.leadingAnchor.constraint(equalTo: b.leadingAnchor) : a.trailingAnchor.constraint(equalTo: b.trailingAnchor),
+            ])
+        }
+        for dir in [UISwipeGestureRecognizer.Direction.left, .right] {
+            let g = UISwipeGestureRecognizer()
+            g.direction = dir
+            g.addAction { [weak self] _ in self?.switchKeyboard(dir == .left ? 1 : -1) }
+            b.addGestureRecognizer(g)
+        }
+        return b
+    }
+
+    private func renderPhone(_ phone: PhoneLayout) {
         let rows = page == 0 ? phone.rows : phone.numbers
+        let columns = rows.map { $0.count }.max() ?? 10
         for (i, keyRow) in rows.enumerated() {
             let last = i == rows.count - 1
             var keys: [(UIButton, CGFloat)] = []
@@ -366,9 +469,9 @@ final class KeyboardViewController: UIInputViewController {
                     self?.shift.toggle(); self?.render()
                 }, 1.4))
             }
-            keys += keyRow.map { (phoneKey($0.0, $0.1), 1) }
+            keys += keyRow.map { (phoneKey(phone, $0), 1) }
             if last { keys.append((keyButton("⌫", sub: "", height: 44) { [weak self] in self?.backspace() }, 1.4)) }
-            rowsStack.addArrangedSubview(row(keys, columns: 11))
+            rowsStack.addArrangedSubview(row(keys, columns: columns))
         }
         var bottom: [(UIButton, CGFloat)] = []
         bottom.append((keyButton(page == 0 ? "१२३" : "कख", sub: "", height: 44) { [weak self] in
@@ -378,27 +481,30 @@ final class KeyboardViewController: UIInputViewController {
             self.render()
         }, 1.4))
         addGlobe(&bottom)
-        bottom.append((keyButton("abc", sub: "", height: 44) { [weak self] in self?.setTraditional(false) }, 1.2))
+        bottom.append((keyButton("✍", sub: "", height: 44) { [weak self] in self?.openWriting() }, 1))
         if phone.bottom.count == 2 {
-            bottom.append((phoneKey(phone.bottom[0].0, phone.bottom[0].1), 1))
-            bottom.append((keyButton("space", sub: "", height: 44) { [weak self] in self?.insert(" ") }, 3.6))
-            bottom.append((phoneKey(phone.bottom[1].0, phone.bottom[1].1), 1))
+            bottom.append((phoneKey(phone, phone.bottom[0]), 1))
+            bottom.append((spaceBar(height: 44) { [weak self] in self?.insert(" ") }, 4))
+            bottom.append((phoneKey(phone, phone.bottom[1]), 1))
+        } else {
+            bottom.append((spaceBar(height: 44) { [weak self] in self?.insert(" ") }, 4))
         }
         bottom.append((keyButton("↵", sub: "", accent: true, height: 44) { [weak self] in self?.insert("\n") }, 1.5))
         rowsStack.addArrangedSubview(row(bottom, columns: nil))
     }
 
-    /// A traditional key: big letter in the middle, the hold letter small in the top-right corner.
-    /// Tap types the letter; hold (or ⇧ then tap) types the corner letter.
-    private func phoneKey(_ tap: String, _ hold: String) -> UIButton {
-        let shown = shift && !hold.isEmpty ? hold : tap
-        let corner = shift ? (hold.isEmpty ? "" : tap) : hold
+    /// A letter key: big letter in the middle, the hold letter small in the top-right corner.
+    /// Tap types the letter; hold types the corner letter; ⇧ shows the layout's shift letter.
+    private func phoneKey(_ phone: PhoneLayout, _ k: PhoneKey) -> UIButton {
+        let alt = phone.shifted(k)
+        let shown = shift && !alt.isEmpty ? alt : k.tap
+        let corner = shift && !alt.isEmpty ? k.tap : k.hold
         let b = keyButton(shown, sub: "", height: 44) { [weak self] in
             guard let self else { return }
             self.insert(shown)
             if self.shift { self.shift = false; self.render() }
         }
-        b.accessibilityLabel = hold.isEmpty ? tap : "\(tap), hold for \(hold)"
+        b.accessibilityLabel = k.hold.isEmpty ? k.tap : "\(k.tap), hold for \(k.hold)"
         if !corner.isEmpty {
             let c = UILabel()
             c.text = corner
@@ -412,8 +518,8 @@ final class KeyboardViewController: UIInputViewController {
                 c.trailingAnchor.constraint(equalTo: b.trailingAnchor, constant: -3),
             ])
         }
-        if !hold.isEmpty {
-            let other = shift ? tap : hold
+        if !k.hold.isEmpty {
+            let other = shift && !alt.isEmpty ? k.tap : k.hold
             let g = UILongPressGestureRecognizer()
             g.minimumPressDuration = 0.38
             g.addAction { [weak self] g in
@@ -429,7 +535,7 @@ final class KeyboardViewController: UIInputViewController {
 
     private func addGlobe(_ bottom: inout [(UIButton, CGFloat)]) {
         guard needsInputModeSwitchKey else { return }
-        let globe = keyButton("🌐", sub: "", height: traditional ? 44 : 46) {}
+        let globe = keyButton("🌐", sub: "", height: current.phone ? 44 : 46) {}
         globe.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
         bottom.append((globe, 1.2))
     }

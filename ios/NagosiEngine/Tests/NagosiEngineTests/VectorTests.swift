@@ -72,7 +72,12 @@ final class VectorTests: XCTestCase {
 
     func testTraditionalLayout() throws {
         let l = try PhoneLayout.bundled()
-        XCTAssertEqual(l.rows.map { $0.map { $0.0 }.joined() }, ["ञघङझछटठडढण्", "धभचतथगषयउृे", "बकमानजवपिसु", "शहअखदलफ,र"])
-        XCTAssertEqual(l.rows[2][1].1, "क्ष")
+        XCTAssertEqual(l.rows.map { $0.map { $0.tap }.joined() }, ["ञघङझछटठडढण्", "धभचतथगषयउृे", "बकमानजवपिसु", "शहअखदलफ,र"])
+        XCTAssertEqual(l.rows[2][1].hold, "क्ष")
+        XCTAssertEqual(l.shifted(l.rows[2][1]), "क्ष")
+        let v = try PhoneLayout.bundled("vedic")
+        XCTAssertEqual(v.rows[0].map { $0.tap }.joined(separator: " "), "अं अ आ क च ट त प य श")
+        XCTAssertEqual(v.shifted(v.rows[1][1]), "ि")   // ⇧ इ → ि
+        XCTAssertEqual(v.shifted(v.rows[0][3]), "")    // ⇧ leaves क alone
     }
 }

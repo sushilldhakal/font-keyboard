@@ -56,7 +56,8 @@ targets:
             IsASCIICapable: false
             PrefersRightToLeft: false
             PrimaryLanguage: ne-NP
-            RequestsOpenAccess: false
+            # Full Access only lets the handwriting model download once; typing never uses the network.
+            RequestsOpenAccess: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: np.nagosi.keyboard.extension

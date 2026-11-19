@@ -20,9 +20,10 @@ import android.widget.TextView
 /**
  * Keyboard UI built in code: a suggestion strip, the key rows and a bottom row.
  *
- * Two layouts: the Nepali traditional keys (default; every key types its letter, hold or ⇧ for the
- * small letter in its corner, १२३ for digits) and the romanized keys (hold a key for related
- * letters: d → ध ड ढ). Same layouts as web/keyboard/src/keyboard.ts.
+ * Several keyboards, switched with the ‹ › arrows on the space bar (Keyboards.ALL): नेपाली (Nepali
+ * traditional keys: tap for the letter, hold or ⇧ for the small letter in its corner), नेपाली (Roman),
+ * वैदिक (Vedic Sanskrit: ⇧ turns vowels into signs) and Sanskrit (IAST). १२३ opens digits. Same
+ * layouts as web/keyboard/src/keyboard.ts.
  */
 @SuppressLint("ViewConstructor")
 class KeyboardView(
@@ -36,10 +37,10 @@ class KeyboardView(
         fun onInsert(text: String)
         fun onBackspace()
         fun onSuggestion(word: String)
-        fun onSwitchScheme()
         fun onNextKeyboard()
         fun onEnter()
-        fun onLayout(traditional: Boolean)
+        /** The space-bar arrows switched to another keyboard. */
+        fun onSwitch(choice: KeyboardChoice)
     }
 
     private val dark = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -52,12 +53,21 @@ class KeyboardView(
     private val strip = LinearLayout(context)
     private val rowsBox = LinearLayout(context)
     private var shift = false
-    private var scheme = "nepali-roman"
-    /** Nepali traditional keys (true) or romanized keys. */
-    var traditional = true
-        set(v) { field = v; page = 0; shift = false; render() }
+    /** The keyboard on screen (a Keyboards.ALL id). */
+    var keyboard: KeyboardChoice = Keyboards.ALL[0]
+        set(v) {
+            if (field.lang != v.lang) release()
+            field = v; page = 0; shift = false; writing = false; render(); showSuggestions("", emptyList())
+        }
     private var page = 0
     private var popup: PopupWindow? = null
+
+    /** Handwriting panel open (✍ key). */
+    private var writing = false
+    private var handwriting: Handwriting? = null
+    private var pad: InkPad? = null
+    private var inkWords: List<String> = emptyList()
+    private val padHint = TextView(context)
 
     init {
         orientation = VERTICAL
@@ -75,15 +85,8 @@ class KeyboardView(
         render()
     }
 
-    fun setScheme(id: String) {
-        scheme = id
-        shift = false
-        page = 0
-        render()
-        showSuggestions("", emptyList())
-    }
-
     fun showSuggestions(composing: String, words: List<String>) {
+        if (writing) return
         strip.removeAllViews()
         if (composing.isNotEmpty()) {
             strip.addView(TextView(context).apply {
@@ -107,32 +110,31 @@ class KeyboardView(
         }
     }
 
-    private fun rows(): List<List<String>> = if (scheme == "inscript") NagosiAssets.inscriptRows(context) else QWERTY
-
     private fun label(k: String): Pair<String, String> {
-        if (scheme == "inscript") {
-            val key = if (shift) NagosiAssets.inscriptShift(context)[k] ?: k else k
-            return (NagosiAssets.inscript(context)[key] ?: key) to key
-        }
         val key = if (shift) k.uppercase() else k
         if (k[0].isDigit()) return "०१२३४५६७८९"[k[0] - '0'].toString() to k
+        if (keyboard.id == "iast") return key to key
         return (ROMAN_HINT[key] ?: key) to key
     }
 
     private fun render() {
         popup?.dismiss()
         rowsBox.removeAllViews()
-        if (traditional) {
-            renderTraditional()
+        if (writing) {
+            renderWriting()
             return
         }
-        val rs = rows()
+        if (keyboard.phone) {
+            renderPhone(Keyboards.phone(context, keyboard.id))
+            return
+        }
+        val rs = QWERTY
         rs.forEachIndexed { i, row ->
             val line = row()
             if (i == rs.lastIndex) line.addView(key("⇧", "", 1.5f, if (shift) accent else keyBg) { shift = !shift; render() })
             for (k in row) {
                 val (main, ch) = label(k)
-                val more = if (scheme == "nepali-roman" && !shift) ROMAN_MORE[k] else null
+                val more = if (keyboard.id == "nepali-roman" && !shift) ROMAN_MORE[k] else null
                 line.addView(key(main, ch, 1f, keyBg, more = more) {
                     listener.onKey(ch)
                     if (shift) { shift = false; render() }
@@ -142,42 +144,187 @@ class KeyboardView(
             rowsBox.addView(line)
         }
         val bottom = row()
-        val schemeLabel = when (scheme) { "nepali-roman" -> "नेपाली"; "iast" -> "IAST"; else -> "INSCRIPT" }
         bottom.addView(key("🌐", "", 1.2f, keyBg) { listener.onNextKeyboard() })
-        bottom.addView(key(schemeLabel, "", 1.6f, keyBg) { listener.onSwitchScheme() })
-        bottom.addView(key("कख", "", 1.2f, keyBg) { traditional = true; listener.onLayout(true) })
-        bottom.addView(key("।", "", 1f, keyBg) { listener.onKey(if (scheme == "inscript") ">" else "|") })
-        bottom.addView(key("space", "", 3.4f, keyBg) { listener.onKey(" ") })
+        bottom.addView(key("✍", "", 1f, keyBg) { openWriting() })
+        bottom.addView(key(",", "", 1f, keyBg) { listener.onKey(",") })
+        bottom.addView(spaceBar(4.6f) { listener.onKey(" ") })
+        bottom.addView(key("।", "", 1f, keyBg) { listener.onKey("|") })
         bottom.addView(key("↵", "", 1.5f, accent) { listener.onEnter() })
         rowsBox.addView(bottom)
     }
 
-    private fun renderTraditional() {
-        val rs = if (page == 0) NagosiAssets.traditionalRows(context) else NagosiAssets.traditionalNumbers(context)
+    // ---------------------------------------------------------------- handwriting
+
+    private fun openWriting() {
+        writing = true
+        render()
+    }
+
+    private fun closeWriting() {
+        commitInk(null)
+        writing = false
+        pad = null
+        render()
+    }
+
+    /** Insert a recognised word (the first candidate when [word] is null) and clear the pad. */
+    private fun commitInk(word: String?, then: String = "") {
+        val w = word ?: inkWords.firstOrNull()
+        if (w != null && pad?.isEmpty == false) listener.onInsert(w + then) else if (then.isNotEmpty()) listener.onInsert(then)
+        inkWords = emptyList()
+        pad?.clear()
+        showInkWords()
+    }
+
+    private fun showInkWords() {
+        strip.removeAllViews()
+        for (w in inkWords) {
+            strip.addView(TextView(context).apply {
+                text = w
+                typeface = this@KeyboardView.typeface
+                setTextColor(ink)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f)
+                setPadding(dp(14), dp(4), dp(14), dp(4))
+                background = rounded(keyBg)
+                setOnClickListener { commitInk(w) }
+            }, LayoutParams(LayoutParams.WRAP_CONTENT, dp(36)).apply { marginEnd = dp(6) })
+        }
+    }
+
+    private fun renderWriting() {
+        val lang = if (keyboard.lang == "sa") "sa" else "ne"
+        val hw = handwriting ?: Handwriting(lang).also { handwriting = it }
+        val p = InkPad(context, ink) { inkData ->
+            hw.recognize(inkData) { words -> inkWords = words; showInkWords() }
+        }.apply {
+            background = rounded(keyBg)
+            onNewWord = { if (inkWords.isNotEmpty()) commitInk(null) }
+        }
+        pad = p
+        val frame = FrameLayout(context)
+        frame.addView(p, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        padHint.apply {
+            typeface = this@KeyboardView.typeface
+            setTextColor(sub)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            gravity = Gravity.CENTER
+        }
+        (padHint.parent as? android.view.ViewGroup)?.removeView(padHint)
+        frame.addView(padHint, FrameLayout.LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT))
+        fun hint(state: Handwriting.State) {
+            padHint.text = when (state) {
+                Handwriting.State.DOWNLOADING -> "हस्तलेखन मोडेल डाउनलोड हुँदैछ… (एक पटक मात्र)"
+                Handwriting.State.READY -> "यहाँ लेख्नुहोस्…"
+                Handwriting.State.FAILED -> "हस्तलेखन मोडेल डाउनलोड भएन। इन्टरनेट जोडेर फेरि खोल्नुहोस्।"
+            }
+            padHint.isClickable = false
+        }
+        hint(hw.state)
+        if (hw.state != Handwriting.State.READY) hw.prepare { hint(it) }
+        p.onNewWord = {
+            padHint.text = ""
+            if (inkWords.isNotEmpty()) commitInk(null)
+        }
+        rowsBox.addView(frame, LayoutParams(LayoutParams.MATCH_PARENT, dp(196)).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) })
+        val bottom = row()
+        bottom.addView(key(if (keyboard.phone) "कख" else "abc", "", 1.4f, keyBg) { closeWriting() })
+        bottom.addView(key("खाली ठाउँ", "", 4.4f, keyBg) { commitInk(null, " ") })
+        bottom.addView(key("⌫", "", 1.4f, keyBg, repeat = true) {
+            if (pad?.isEmpty == false) { inkWords = emptyList(); pad?.clear(); showInkWords() } else listener.onBackspace()
+        })
+        bottom.addView(key("↵", "", 1.5f, accent) { commitInk(null); listener.onEnter() })
+        rowsBox.addView(bottom)
+    }
+
+    /** Release the recognizer (the keyboard is going away). */
+    fun release() {
+        handwriting?.close()
+        handwriting = null
+    }
+
+    private fun switchBy(step: Int) {
+        val next = Keyboards.next(keyboard.id, step)
+        keyboard = next
+        listener.onSwitch(next)
+    }
+
+    /** Space bar: ‹ name ›. The arrows (or a swipe along the bar) switch keyboard; the middle types a space. */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun spaceBar(weight: Float, onSpace: () -> Unit): View {
+        val box = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = rounded(keyBg)
+            contentDescription = "Space. Keyboard ${keyboard.label}"
+        }
+        fun arrow(t: String, step: Int, desc: String) = TextView(context).apply {
+            text = t
+            setTextColor(sub)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            gravity = Gravity.CENTER
+            contentDescription = desc
+            setPadding(dp(10), 0, dp(10), 0)
+            setOnClickListener { it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); switchBy(step) }
+        }
+        box.addView(arrow("‹", -1, "Previous keyboard"), LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        val name = TextView(context).apply {
+            text = keyboard.label
+            typeface = this@KeyboardView.typeface
+            setTextColor(ink)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            gravity = Gravity.CENTER
+            maxLines = 1
+        }
+        var downX = 0f
+        name.setOnTouchListener { v, e ->
+            when (e.action) {
+                MotionEvent.ACTION_DOWN -> { downX = e.rawX; v.isPressed = true }
+                MotionEvent.ACTION_UP -> {
+                    v.isPressed = false
+                    val dx = e.rawX - downX
+                    if (kotlin.math.abs(dx) > dp(40)) switchBy(if (dx > 0) -1 else 1)
+                    else { v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); onSpace() }
+                }
+                MotionEvent.ACTION_CANCEL -> v.isPressed = false
+            }
+            true
+        }
+        box.addView(name, LayoutParams(0, LayoutParams.MATCH_PARENT, 1f))
+        box.addView(arrow("›", 1, "Next keyboard"), LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT))
+        box.layoutParams = LayoutParams(0, dp(48), weight).apply { setMargins(dp(1), dp(3), dp(1), dp(3)) }
+        return box
+    }
+
+    private fun renderPhone(layout: PhoneLayout) {
+        val rs = if (page == 0) layout.rows else layout.numbers
         rs.forEachIndexed { i, row ->
             val line = row()
             val last = i == rs.lastIndex
             if (last && page == 0) line.addView(key("⇧", "", 1.4f, if (shift) accent else keyBg, height = 48) { shift = !shift; render() })
-            for (k in row) line.addView(phoneKey(k[0], k[1]))
+            for (k in row) line.addView(phoneKey(layout, k))
             if (last) line.addView(key("⌫", "", 1.4f, keyBg, repeat = true, height = 48) { listener.onBackspace() })
             rowsBox.addView(line)
         }
-        val (dot, danda) = NagosiAssets.traditionalBottom(context)
         val bottom = row()
         bottom.addView(key(if (page == 0) "१२३" else "कख", "", 1.4f, keyBg) { page = 1 - page; shift = false; render() })
         bottom.addView(key("🌐", "", 1.1f, keyBg) { listener.onNextKeyboard() })
-        bottom.addView(key("abc", "", 1.2f, keyBg) { traditional = false; listener.onLayout(false) })
-        bottom.addView(phoneKey(dot[0], dot[1], 1f))
-        bottom.addView(key("space", "", 3.6f, keyBg) { listener.onInsert(" ") })
-        bottom.addView(phoneKey(danda[0], danda[1], 1f))
+        bottom.addView(key("✍", "", 1f, keyBg) { openWriting() })
+        if (layout.bottom.size == 2) {
+            bottom.addView(phoneKey(layout, layout.bottom[0]))
+            bottom.addView(spaceBar(4f) { listener.onInsert(" ") })
+            bottom.addView(phoneKey(layout, layout.bottom[1]))
+        } else bottom.addView(spaceBar(4f) { listener.onInsert(" ") })
         bottom.addView(key("↵", "", 1.5f, accent) { listener.onEnter() })
         rowsBox.addView(bottom)
     }
 
-    /** A traditional key: big letter in the middle, the hold letter small in the top-right corner. */
-    private fun phoneKey(tap: String, hold: String, weight: Float = 1f): View {
-        val shown = if (shift && hold.isNotEmpty()) hold else tap
-        val corner = if (shift) (if (hold.isNotEmpty()) tap else "") else hold
+    /** A letter key: big letter in the middle, the hold letter small in the top-right corner. */
+    private fun phoneKey(layout: PhoneLayout, k: PhoneKey, weight: Float = 1f): View {
+        val tap = k.tap
+        val hold = k.hold
+        val alt = layout.shifted(k)
+        val shown = if (shift && alt.isNotEmpty()) alt else tap
+        val corner = if (shift && alt.isNotEmpty()) tap else hold
         val box = FrameLayout(context).apply {
             background = rounded(keyBg)
             isClickable = true
@@ -210,9 +357,10 @@ class KeyboardView(
             if (shift) { shift = false; render() }
         }
         if (hold.isNotEmpty()) {
+            val other = if (shift && alt.isNotEmpty()) tap else hold
             box.setOnLongClickListener {
                 it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
-                listener.onInsert(if (shift) tap else hold)
+                listener.onInsert(other)
                 if (shift) { shift = false; render() }
                 true
             }

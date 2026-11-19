@@ -54,6 +54,10 @@ pnpm install && pnpm test                   # engine + web editor
 | Exact letters with capitals | `Dhakaal` | ढकाल, never changed |
 | Hold a key (on-screen) | hold `d` → ढ, `a`, `k`, hold `a` → आ, `l` | ढकाल |
 | Nepali traditional keys (default) | ढ क ा ल | ढकाल |
+| Handwriting (Android, iOS) | ✍, write ढकाल | ढकाल |
+
+The on-screen keyboards switch with ‹ › on the space bar: नेपाली (traditional), नेपाली (Roman),
+वैदिक (Vedic Sanskrit with svara marks) and Sanskrit (IAST).
 
 ## One engine, three platforms
 
