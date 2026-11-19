@@ -8,14 +8,16 @@ engine, a web keyboard, an Android keyboard and an iOS keyboard. They share one 
   macOS, Linux and every current browser. All files pass OTS, the font sanitizer that browsers run.
 - **Classical conjuncts**: 185 stacked forms (ड्ग द्श ङ्ल ट्क …) that most Devanagari fonts break
   with a visible halant. They were chosen by shaping real Sanskrit texts, where they occur thousands of times.
-- **Input**: Romanized Nepali (`namaste` → नमस्ते), IAST, ITRANS, Harvard-Kyoto and INSCRIPT, with
-  word suggestions from Nepali and Sanskrit dictionaries. Everything works offline.
+- **Input**: type Nepali the way it sounds. `dhakal` gives ढकाल, `nepal` नेपाल, `tapai` तपाईं: a
+  37,700-word Nepali dictionary and a letter-pair model pick the right spelling, and a Backspace right
+  after undoes the pick. Or hold a key (`d` → ध ड ढ), or tap the letters on the कख page. IAST,
+  ITRANS, Harvard-Kyoto and INSCRIPT are there for Sanskrit. Everything works offline.
 
 | | Folder | Status |
 | --- | --- | --- |
 | Phase 1: font engineering | `font/` | v1.000 built and tested |
 | Phase 2: optimization and CDN | `cdn/` | variable + static WOFF2, unicode-range CSS |
-| Phase 3: transliteration engine | `engine/` | TypeScript reference, 74 tests |
+| Phase 3: transliteration engine | `engine/` | TypeScript reference, 100 tests |
 | Phase 4: web keyboard and editor | `web/` | `@nagosi/keyboard` + Type Studio |
 | Phase 5: Android keyboard | `android/` | Kotlin IME; debug APK builds |
 | Phase 6: iOS keyboard | `ios/` | Swift package, keyboard extension and app |
@@ -42,6 +44,16 @@ pnpm install && pnpm test                   # engine + web editor
 (cd android && ./gradlew :engine:test :app:assembleDebug)
 (cd ios/NagosiEngine && swift test)
 ```
+
+## Typing a word like ढकाल
+
+| How | Keys | Result |
+| --- | --- | --- |
+| As it sounds | `dhakal` Space | ढकाल (dictionary pick; Backspace right after gives धकल) |
+| Pick another spelling | `dhakal`, tap a candidate | ढकाल, धकाल, ढकल … |
+| Exact letters with capitals | `Dhakaal` | ढकाल, never changed |
+| Hold a key (on-screen) | hold `d` → ढ, `a`, `k`, hold `a` → आ, `l` | ढकाल |
+| Letter keys (कख) | ढ क ा ल | ढकाल |
 
 ## One engine, three platforms
 

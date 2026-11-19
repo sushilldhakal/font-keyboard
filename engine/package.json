@@ -1,20 +1,32 @@
 {
   "name": "@nagosi/engine",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Nepali and Sanskrit Romanized input: transliteration (Romanized Nepali, IAST, ITRANS, Harvard-Kyoto), Devanagari Unicode helpers and word suggestions",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./dictionaries/ne.json": "./suggestions/data/ne.json",
     "./dictionaries/sa.json": "./suggestions/data/sa.json",
-    "./schemes/*.json": "./transliteration/schemes/*.json"
+    "./schemes/*.json": "./transliteration/schemes/*.json",
+    "./dictionaries/bigrams.json": "./suggestions/data/bigrams.json"
   },
-  "files": ["dist", "suggestions/data", "transliteration/schemes"],
+  "files": [
+    "dist",
+    "suggestions/data",
+    "transliteration/schemes"
+  ],
   "sideEffects": false,
-  "repository": { "type": "git", "url": "https://github.com/sushilldhakal/font-keyboard.git", "directory": "engine" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sushilldhakal/font-keyboard.git",
+    "directory": "engine"
+  },
   "scripts": {
     "gen": "node scripts/gen-schemes.mjs",
     "build": "node scripts/gen-schemes.mjs && tsc -p tsconfig.json",

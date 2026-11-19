@@ -2,21 +2,40 @@
  * NagosiInput: turns any <textarea> or <input> into a Nepali/Sanskrit input field.
  *
  * Desktop: intercepts `beforeinput`, keeps the composing word inline and replaces it as each roman
- * key arrives. Phones whose keyboards compose Latin words themselves (Gboard, SwiftKey): converts
- * each word on `compositionend`. Direct layouts (INSCRIPT) map key → letter with no composition.
+ * key arrives. Space commits the best dictionary word for loosely typed Romanized Nepali
+ * ("dhakal" → ढकाल); Backspace straight after puts the typed word back. Phones whose keyboards
+ * compose Latin words themselves (Gboard, SwiftKey): converts each word on `compositionend`.
+ * Direct layouts (INSCRIPT, and the on-screen letter keyboard through `insert`) type letters as is.
  */
-import { Composer, Suggester, layouts, schemes, transliterate } from "@nagosi/engine";
+import {
+  COMMIT_KEYS, Composer, Speller, Suggester, candidates, commitWord, layouts, schemes, transliterate,
+} from "@nagosi/engine";
 
 export type Field = HTMLTextAreaElement | HTMLInputElement;
 export type SchemeId = keyof typeof schemes | "inscript" | "off";
 
+export interface InputState {
+  /** Roman keys typed for the current word ("" when typing letters directly). */
+  buffer: string;
+  /** The word being typed, in Devanagari. */
+  composing: string;
+  /** Candidate words for it, best first. */
+  suggestions: string[];
+}
+
 export interface InputOptions {
   scheme?: SchemeId;
   suggester?: Suggester;
+  /** Ranks spelling variants of loosely typed Romanized Nepali (data: dictionaries/bigrams.json). */
+  speller?: Speller;
+  /** Space commits the best dictionary word instead of the strict transliteration (default true). */
+  autoPick?: boolean;
   /** Called whenever the composing word or its suggestions change. */
-  onChange?: (state: { buffer: string; composing: string; suggestions: string[] }) => void;
+  onChange?: (state: InputState) => void;
   suggestionLimit?: number;
 }
+
+const DEVANAGARI_RUN = /[ऀ-ॣॱ-ॿ‌‍]+$/;
 
 export class NagosiInput {
   readonly el: Field;
@@ -26,6 +45,12 @@ export class NagosiInput {
   private len = 0;
   private opts: InputOptions;
   private off: (() => void)[] = [];
+  /** Last automatic pick, so an immediate Backspace can undo it. */
+  private auto: { start: number; text: string; roman: string } | null = null;
+  /** After an undo, the next commit keeps the strict spelling. */
+  private keepStrict = false;
+  /** Letters are being typed directly (on-screen letter keyboard): suggest for the word at the caret. */
+  private direct = false;
 
   constructor(el: Field, opts: InputOptions = {}) {
     this.el = el;
@@ -71,14 +96,44 @@ export class NagosiInput {
     this.emit();
   }
 
-  get state() {
-    const { buffer, composing } = this.composer.state;
-    return { buffer, composing, suggestions: this.suggestions(composing) };
+  setSpeller(s: Speller | undefined): void {
+    this.opts.speller = s;
+    this.emit();
   }
 
-  private suggestions(composing: string): string[] {
-    if (!composing || !this.opts.suggester) return [];
-    return this.opts.suggester.suggest(composing, { limit: this.opts.suggestionLimit ?? 5 });
+  get state(): InputState {
+    const { buffer, composing } = this.composer.state;
+    if (!buffer && this.direct) {
+      const word = this.directWord();
+      return { buffer: "", composing: word, suggestions: this.directSuggestions(word) };
+    }
+    return { buffer, composing, suggestions: this.suggestions(buffer, composing) };
+  }
+
+  private get limit() {
+    return this.opts.suggestionLimit ?? 6;
+  }
+
+  private get romanScheme() {
+    return schemes[this.isRoman(this.scheme) ? this.scheme : "nepali-roman"];
+  }
+
+  private suggestions(buffer: string, composing: string): string[] {
+    if (!composing) return [];
+    return candidates(buffer, composing, this.romanScheme, this.opts.suggester, this.opts.speller, this.limit);
+  }
+
+  /** Letters typed directly are exact: words that start with exactly those letters come first. */
+  private directSuggestions(word: string): string[] {
+    if (!word || !this.opts.suggester) return [];
+    const found = this.opts.suggester.suggest(word, { limit: 40 });
+    const exact = found.filter((w) => w.startsWith(word) && w !== word);
+    return [...exact, ...found.filter((w) => !exact.includes(w))].slice(0, this.limit);
+  }
+
+  private directWord(): string {
+    const before = this.el.value.slice(0, this.el.selectionStart ?? 0);
+    return before.match(DEVANAGARI_RUN)?.[0] ?? "";
   }
 
   private emit() {
@@ -92,6 +147,9 @@ export class NagosiInput {
 
   /** Forget the composing word (its text stays in the field as typed). */
   reset(): void {
+    this.auto = null;
+    this.keepStrict = false;
+    this.direct = false;
     if (this.start < 0 && !this.composer.state.buffer) return;
     this.composer.flush();
     this.start = -1;
@@ -102,6 +160,8 @@ export class NagosiInput {
   /** Type one key, as a physical or on-screen keyboard would. */
   key(ch: string): void {
     const el = this.el;
+    this.auto = null;
+    this.direct = false;
     if (this.scheme === "off") {
       this.replace(el.selectionStart ?? 0, el.selectionEnd ?? 0, ch);
       return;
@@ -111,27 +171,60 @@ export class NagosiInput {
       return;
     }
     if (this.start < 0) {
+      if (COMMIT_KEYS.has(ch)) {
+        this.replace(el.selectionStart ?? 0, el.selectionEnd ?? 0, ch);
+        return;
+      }
       if (el.selectionStart !== el.selectionEnd) this.replace(el.selectionStart ?? 0, el.selectionEnd ?? 0, "");
       this.start = el.selectionStart ?? 0;
       this.len = 0;
     }
-    const r = this.composer.key(ch);
-    if (r.commit) {
-      this.replace(this.start, this.start + this.len, r.commit);
-      const word = r.commit.replace(/[^ऀ-ॿ]+$/, "");
-      if (word) this.opts.suggester?.learn(word);
+    if (COMMIT_KEYS.has(ch)) {
+      const { buffer, composing } = this.composer.state;
+      const pick = this.opts.autoPick === false || this.keepStrict
+        ? composing
+        : commitWord(buffer, composing, this.romanScheme, this.opts.suggester, this.opts.speller);
+      this.composer.key(ch);
+      const text = pick + ch;
+      this.replace(this.start, this.start + this.len, text);
+      if (pick !== composing) this.auto = { start: this.start, text, roman: buffer };
+      else if (pick) this.opts.suggester?.learn(pick);
+      this.keepStrict = false;
       this.start = -1;
       this.len = 0;
     } else {
+      const r = this.composer.key(ch);
       this.replace(this.start, this.start + this.len, r.composing);
       this.len = r.composing.length;
     }
     this.emit();
   }
 
-  /** Backspace: removes the last roman key while composing, else one character. */
+  /** Insert Devanagari directly (on-screen letter keyboard). Suggestions follow the word at the caret. */
+  insert(text: string): void {
+    if (this.start >= 0) this.reset();
+    this.auto = null;
+    const el = this.el;
+    this.replace(el.selectionStart ?? 0, el.selectionEnd ?? 0, text);
+    this.direct = /[ऀ-ॿ]/.test(text);
+    this.emit();
+  }
+
+  /** Backspace: undoes an automatic pick, else removes the last roman key while composing, else one character. */
   backspace(): void {
     const el = this.el;
+    const a = this.auto;
+    this.auto = null;
+    if (a && this.start < 0 && el.selectionStart === el.selectionEnd && el.selectionStart === a.start + a.text.length
+        && el.value.slice(a.start, a.start + a.text.length) === a.text) {
+      const c = this.composer.restore(a.roman).composing;
+      this.replace(a.start, a.start + a.text.length, c);
+      this.start = a.start;
+      this.len = c.length;
+      this.keepStrict = true;
+      this.emit();
+      return;
+    }
     if (this.start >= 0 && this.composer.backspace()) {
       const c = this.composer.state.composing;
       this.replace(this.start, this.start + this.len, c);
@@ -139,6 +232,7 @@ export class NagosiInput {
       if (!this.composer.state.buffer) {
         this.start = -1;
         this.len = 0;
+        this.keepStrict = false;
       }
       this.emit();
       return;
@@ -152,15 +246,25 @@ export class NagosiInput {
       const n = [...before].pop()!.length;
       this.replace(s - n, s, "");
     }
+    if (this.direct) this.emit();
   }
 
-  /** Replace the composing word with a suggestion. */
+  /** Replace the word being typed with a suggestion. */
   choose(word: string): void {
-    if (this.start < 0) return;
-    this.replace(this.start, this.start + this.len, this.composer.choose(word));
+    this.auto = null;
+    this.keepStrict = false;
+    if (this.start >= 0) {
+      this.replace(this.start, this.start + this.len, this.composer.choose(word));
+      this.start = -1;
+      this.len = 0;
+    } else if (this.direct) {
+      const end = this.el.selectionStart ?? 0;
+      const cur = this.directWord();
+      if (!cur) return;
+      this.replace(end - cur.length, end, word + " ");
+      this.direct = false;
+    } else return;
     this.opts.suggester?.learn(word);
-    this.start = -1;
-    this.len = 0;
     this.emit();
   }
 
@@ -172,7 +276,7 @@ export class NagosiInput {
     } else if (e.inputType === "insertLineBreak" && this.el instanceof HTMLTextAreaElement) {
       e.preventDefault();
       this.key("\n");
-    } else if (e.inputType === "deleteContentBackward" && this.start >= 0) {
+    } else if (e.inputType === "deleteContentBackward" && (this.start >= 0 || this.auto)) {
       e.preventDefault();
       this.backspace();
     } else if (this.start >= 0) {
@@ -185,19 +289,23 @@ export class NagosiInput {
     const end = this.el.selectionStart ?? 0;
     const start = end - e.data.length;
     if (start < 0 || this.el.value.slice(start, end) !== e.data) return;
-    const out = this.scheme === "inscript"
-      ? [...e.data].map((c) => layouts.inscript.keys[c] ?? c).join("")
-      : transliterate(e.data, schemes[this.scheme]);
+    let out: string;
+    if (this.scheme === "inscript") out = [...e.data].map((c) => layouts.inscript.keys[c] ?? c).join("");
+    else {
+      const sc = schemes[this.scheme];
+      out = e.data.replace(/[A-Za-z~^_'|.]+/g, (w) =>
+        this.opts.autoPick === false ? transliterate(w, sc) : commitWord(w, transliterate(w, sc), sc, this.opts.suggester, this.opts.speller));
+    }
     this.replace(start, end, out);
   }
 
   private keyDown(e: KeyboardEvent) {
-    if (this.start < 0) return;
+    if (this.start < 0 && !this.direct) return;
     if (e.key === "Tab") {
       const first = this.state.suggestions[0];
+      if (!first) return;
       e.preventDefault();
-      if (first) this.choose(first);
-      else this.key(" ");
+      this.choose(first);
     } else if (e.key === "Escape" || e.key.startsWith("Arrow") || e.key === "Home" || e.key === "End") {
       this.reset();
     }

@@ -64,6 +64,12 @@ export class Composer {
     return word;
   }
 
+  /** Start composing these roman keys again (undoing an automatic pick puts the word back). */
+  restore(buffer: string): ComposerState {
+    this.buf = buffer;
+    return this.state;
+  }
+
   /** Replace the composing word with a chosen suggestion. */
   choose(word: string, trailing = " "): string {
     this.buf = "";

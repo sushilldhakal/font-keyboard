@@ -50,6 +50,26 @@ class VectorTest {
     fun suggestsFromTheNepaliDictionary() {
         val s = Suggester.fromJson(File(root, "engine/suggestions/data/ne.json").readText())
         assertTrue(s.size > 3000)
-        assertTrue("सबै" in s.suggest(Transliterator.transliterate("saba", scheme("nepali-roman"))))
+        val sc = scheme("nepali-roman")
+        assertTrue("सबै" in Spellings.candidates("saba", Transliterator.transliterate("saba", sc), sc, s, null))
+    }
+
+    @Test
+    fun spellingVectors() {
+        val sc = scheme("nepali-roman")
+        val sug = Suggester.fromJson(File(root, "engine/suggestions/data/ne.json").readText())
+        val sp = Speller.fromJson(File(root, "engine/suggestions/data/bigrams.json").readText())
+        val c = cases("spellings")
+        fun list(a: JSONArray) = (0 until a.length()).map { a.getString(it) }
+        for (i in 0 until c.length()) {
+            val v = c.getJSONObject(i)
+            val roman = v.getString("roman")
+            val composed = Transliterator.transliterate(roman, sc)
+            assertEquals(v.getString("composed"), composed, roman)
+            assertEquals(list(v.getJSONArray("variants")), sp.variants(roman, sc, 5), roman)
+            assertEquals(v.getString("commit"), Spellings.commitWord(roman, composed, sc, sug, sp), roman)
+            assertEquals(list(v.getJSONArray("candidates")), Spellings.candidates(roman, composed, sc, sug, sp), roman)
+        }
+        assertEquals("ढकाल", Spellings.commitWord("dhakal", "धकल", sc, sug, sp))
     }
 }

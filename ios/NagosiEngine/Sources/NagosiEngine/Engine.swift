@@ -136,6 +136,9 @@ public final class Composer {
         return word
     }
 
+    /// Start composing these roman keys again (undoing an automatic pick puts the word back).
+    public func restore(_ buf: String) { buffer = buf }
+
     public func choose(_ word: String, trailing: String = " ") -> String {
         buffer = ""
         return word + trailing
@@ -150,6 +153,7 @@ public enum Skeleton {
             ("ट", "त"), ("ठ", "थ"), ("ड", "द"), ("ढ", "ध"), ("ण", "न"), ("ङ", "न"), ("ञ", "न"),
             ("ष", "स"), ("श", "स"), ("व", "ब"), ("ं", "न"), ("ँ", "न"), ("ः", ""),
             ("ृ", "रि"), ("ऋ", "रि"), ("ै", "े"), ("ऐ", "ए"), ("ौ", "ो"), ("औ", "ओ"),
+            ("ा", ""), ("आ", "अ"), ("छ", "च"),
             ("\u{094D}", ""), ("\u{093C}", ""), ("\u{200C}", ""), ("\u{200D}", ""),
         ]
         var m: [Unicode.Scalar: String] = [:]
@@ -159,7 +163,8 @@ public enum Skeleton {
 
     public static func of(_ word: String) -> String {
         var out = ""
-        for u in word.precomposedStringWithCanonicalMapping.decomposedStringWithCanonicalMapping.unicodeScalars {
+        let w = word.precomposedStringWithCanonicalMapping.replacingOccurrences(of: "ज्ञ", with: "ग्य")
+        for u in w.decomposedStringWithCanonicalMapping.unicodeScalars {
             if let f = fold[u] { out += f } else { out.unicodeScalars.append(u) }
         }
         return out.precomposedStringWithCanonicalMapping
@@ -171,6 +176,7 @@ public final class Suggester {
 
     private var items: [Item] = []
     private var learned: [String: Int] = [:]
+    private var freqOf: [String: Int] = [:]
 
     public init(entries: [(String, Int)] = []) { add(entries) }
 
@@ -202,12 +208,16 @@ public final class Suggester {
         for (w, f) in entries {
             let k = Skeleton.of(w)
             items.append(Item(key: Array(k.unicodeScalars), keyString: k, word: w, freq: f))
+            freqOf[w] = max(f, freqOf[w] ?? 0)
         }
         items.sort { a, b in
             if a.key != b.key { return Suggester.less(a.key, b.key) }
             return a.freq > b.freq
         }
     }
+
+    /// Times the user chose a word (weighted heavily), then its corpus count.
+    public func weight(_ word: String) -> Double { Double(learned[word] ?? 0) * 1e6 + Double(freqOf[word] ?? 0) }
 
     public func learn(_ word: String) {
         learned[word, default: 0] += 1
@@ -234,11 +244,11 @@ public final class Suggester {
         }
         var pool: [Item] = []
         var i = lo
-        while i < items.count, pool.count < 4000, items[i].key.starts(with: key) {
+        while i < items.count, pool.count < 20000, items[i].key.starts(with: key) {
             pool.append(items[i]); i += 1
         }
         func score(_ it: Item) -> Double {
-            (it.word == composed ? 1e12 : 0) + (it.key == key ? 1e9 : 0) + Double(learned[it.word] ?? 0) * 1e6 + Double(it.freq)
+            (it.key == key ? 1e9 : 0) + Double(learned[it.word] ?? 0) * 1e6 + Double(it.freq) + (it.word == composed ? 0.5 : 0)
         }
         pool.sort { a, b in
             let sa = score(a), sb = score(b)

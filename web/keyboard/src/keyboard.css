@@ -21,3 +21,14 @@
 .nagosi-key.space .nagosi-key-main { font-size: 13px; color: var(--nk-sub); }
 .nagosi-key.on { background: var(--nk-on); color: var(--nk-on-ink); }
 @media (max-width: 480px) { .nagosi-key { height: 44px; } .nagosi-key-main { font-size: 17px; } .nagosi-row { gap: 3px; } }
+.nagosi-kbd { position: relative; }
+.nagosi-key.has-more { position: relative; }
+.nagosi-key.has-more::after { content: ""; position: absolute; top: 5px; right: 6px; width: 4px; height: 4px; border-radius: 50%; background: var(--nk-sub); opacity: .7; }
+.nagosi-pop {
+  position: absolute; z-index: 5; display: flex; gap: 4px; padding: 6px; background: var(--nk-bg); border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.25);
+}
+.nagosi-pop .nagosi-key { width: 52px; flex: 0 0 auto; }
+.nagosi-kbd[data-layout="letters"] .nagosi-key { height: 46px; }
+.nagosi-kbd[data-layout="letters"] .nagosi-key-main { font-size: 22px; }
+@media (max-width: 480px) { .nagosi-kbd[data-layout="letters"] .nagosi-key { height: 40px; } .nagosi-kbd[data-layout="letters"] .nagosi-key-main { font-size: 18px; } }

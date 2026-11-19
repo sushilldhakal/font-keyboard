@@ -14,5 +14,9 @@ brew install xcodegen && xcodegen # generates Nagosi.xcodeproj from project.yml
 open Nagosi.xcodeproj
 ```
 
+Typing: type as it sounds (`dhakal`) and Space commits the dictionary word (ढकाल); Backspace right
+after restores what you typed. Hold a key for related letters (`d` → ध ड ढ). **कख** opens the
+Devanagari letter keys (two pages), **abc** goes back.
+
 Status: the engine package passes its tests. The extension and the app type-check against the
 iOS 16 SDK. They have not run on a device or simulator yet.

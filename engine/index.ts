@@ -8,3 +8,4 @@ export * as unicode from "./unicode/devanagari.js";
 export { normalize, aksharas, validate, toDevanagariDigits, toAsciiDigits, isDevanagari } from "./unicode/devanagari.js";
 export { Suggester, skeleton } from "./suggestions/suggester.js";
 export type { DictionaryEntry } from "./suggestions/suggester.js";
+export { Speller, candidates, commitWord, tokenize, ALTERNATIVES } from "./suggestions/spellings.js";

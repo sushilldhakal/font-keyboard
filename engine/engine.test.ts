@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
-  Composer, Suggester, aksharas, iast, nepaliRoman, normalize, schemes, skeleton, toAsciiDigits,
+  Composer, Speller, Suggester, aksharas, candidates, commitWord, tokenize, iast, nepaliRoman, normalize, schemes, skeleton, toAsciiDigits,
   toDevanagariDigits, toRoman, transliterate, validate, type DictionaryEntry,
 } from "./index.js";
 
@@ -101,5 +101,51 @@ describe("Suggester", () => {
   it("suggests an exact word first", () => {
     const t = new Suggester([["संस्कृत", 10], ["संस्कृति", 100]]);
     expect(t.suggest(transliterate("saMskRt", nepaliRoman))[0]).toBe("संस्कृत");
+  });
+});
+
+describe("loose Romanized Nepali (type it the way it sounds)", () => {
+  const sc = schemes["nepali-roman"];
+  const sug = new Suggester(JSON.parse(readFileSync(new URL("./suggestions/data/ne.json", import.meta.url), "utf8")));
+  const sp = new Speller(JSON.parse(readFileSync(new URL("./suggestions/data/bigrams.json", import.meta.url), "utf8")));
+  const commit = (roman: string) => commitWord(roman, transliterate(roman, sc), sc, sug, sp);
+
+  it("Space commits the dictionary word for plain lowercase typing", () => {
+    const expected: Record<string, string> = {
+      dhakal: "ढकाल", paudel: "पौडेल", nepal: "नेपाल", shanti: "शान्ति", gyan: "ज्ञान", rishi: "ऋषि",
+      krishna: "कृष्ण", prithvi: "पृथ्वी", sanskrit: "संस्कृत", dhanyabad: "धन्यवाद", adhikari: "अधिकारी",
+      tapai: "तपाईं", kaha: "कहाँ", cha: "छ", ram: "राम", kam: "काम", sita: "सीता", dudh: "दूध", sushil: "सुशील",
+      namaste: "नमस्ते", mero: "मेरो", ghar: "घर",
+    };
+    for (const [roman, word] of Object.entries(expected)) expect(commit(roman), roman).toBe(word);
+  });
+
+  it("keeps the strict spelling when the user typed a capital or the word is unknown", () => {
+    expect(commit("Dhakaal")).toBe("ढकाल");
+    expect(commit("DhakAl")).toBe("ढकाल");
+    expect(commit("dhaKal")).toBe("धकल");
+    expect(commit("xyzq")).toBe(transliterate("xyzq", sc));
+  });
+
+  it("offers the right spelling in the candidate bar even when it is not the strict reading", () => {
+    for (const [roman, word] of [["dhakal", "ढकाल"], ["sanga", "सँग"], ["bikas", "विकास"], ["sahar", "शहर"], ["thapa", "थापा"]]) {
+      expect(candidates(roman, transliterate(roman, sc), sc, sug, sp), roman).toContain(word);
+    }
+  });
+
+  it("spells unknown words plausibly from letter pairs", () => {
+    expect(sp.variants("dhakal", sc, 5)).toContain("ढकल");
+    expect(sp.variants("Dhakal", sc)).toEqual([]);
+    expect(tokenize("chhaina").map((t) => t[0])).toEqual(["chh", "ai", "n", "a"]);
+  });
+
+  it("matches tests/vectors/spellings.json", () => {
+    const v = JSON.parse(readFileSync(new URL("../tests/vectors/spellings.json", import.meta.url), "utf8"));
+    for (const c of v.cases) {
+      expect(transliterate(c.roman, sc)).toBe(c.composed);
+      expect(sp.variants(c.roman, sc, 5), c.roman).toEqual(c.variants);
+      expect(commitWord(c.roman, c.composed, sc, sug, sp), c.roman).toBe(c.commit);
+      expect(candidates(c.roman, c.composed, sc, sug, sp), c.roman).toEqual(c.candidates);
+    }
   });
 });

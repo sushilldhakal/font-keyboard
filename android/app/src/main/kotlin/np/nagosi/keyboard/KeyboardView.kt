@@ -13,9 +13,15 @@ import android.view.MotionEvent
 import android.view.View
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
 import android.widget.TextView
 
-/** Keyboard UI built in code: a suggestion strip, four letter rows and a bottom row. */
+/**
+ * Keyboard UI built in code: a suggestion strip, the key rows and a bottom row.
+ *
+ * Two pages: the romanized keys (hold a key for related letters: d → ध ड ढ, a → आ) and कख, the
+ * Devanagari letter keys, which type each letter as is. Same layouts as web/keyboard/src/keyboard.ts.
+ */
 @SuppressLint("ViewConstructor")
 class KeyboardView(
     context: Context,
@@ -25,6 +31,7 @@ class KeyboardView(
 
     interface Listener {
         fun onKey(ch: String)
+        fun onInsert(text: String)
         fun onBackspace()
         fun onSuggestion(word: String)
         fun onSwitchScheme()
@@ -43,6 +50,9 @@ class KeyboardView(
     private val rowsBox = LinearLayout(context)
     private var shift = false
     private var scheme = "nepali-roman"
+    private var letters = false
+    private var page = 0
+    private var popup: PopupWindow? = null
 
     init {
         orientation = VERTICAL
@@ -63,6 +73,8 @@ class KeyboardView(
     fun setScheme(id: String) {
         scheme = id
         shift = false
+        letters = false
+        page = 0
         render()
         showSuggestions("", emptyList())
     }
@@ -104,14 +116,20 @@ class KeyboardView(
     }
 
     private fun render() {
+        popup?.dismiss()
         rowsBox.removeAllViews()
+        if (letters) {
+            renderLetters()
+            return
+        }
         val rs = rows()
         rs.forEachIndexed { i, row ->
             val line = row()
             if (i == rs.lastIndex) line.addView(key("⇧", "", 1.5f, if (shift) accent else keyBg) { shift = !shift; render() })
             for (k in row) {
                 val (main, ch) = label(k)
-                line.addView(key(main, ch, 1f, keyBg) {
+                val more = if (scheme == "nepali-roman" && !shift) ROMAN_MORE[k] else null
+                line.addView(key(main, ch, 1f, keyBg, more = more) {
                     listener.onKey(ch)
                     if (shift) { shift = false; render() }
                 })
@@ -123,10 +141,61 @@ class KeyboardView(
         val schemeLabel = when (scheme) { "nepali-roman" -> "नेपाली"; "iast" -> "IAST"; else -> "INSCRIPT" }
         bottom.addView(key("🌐", "", 1.2f, keyBg) { listener.onNextKeyboard() })
         bottom.addView(key(schemeLabel, "", 1.6f, keyBg) { listener.onSwitchScheme() })
+        bottom.addView(key("कख", "", 1.2f, keyBg) { letters = true; page = 0; render() })
         bottom.addView(key("।", "", 1f, keyBg) { listener.onKey(if (scheme == "inscript") ">" else "|") })
-        bottom.addView(key("space", "", 4f, keyBg) { listener.onKey(" ") })
+        bottom.addView(key("space", "", 3.4f, keyBg) { listener.onKey(" ") })
         bottom.addView(key("↵", "", 1.5f, accent) { listener.onEnter() })
         rowsBox.addView(bottom)
+    }
+
+    private fun renderLetters() {
+        val rs = LETTER_PAGES[page]
+        rs.forEachIndexed { i, row ->
+            val line = row()
+            for (k in row) line.addView(key(k, "", 1f, keyBg, height = 46) { listener.onInsert(k) })
+            if (i == rs.lastIndex) line.addView(key("⌫", "", 1.5f, keyBg, repeat = true, height = 46) { listener.onBackspace() })
+            rowsBox.addView(line)
+        }
+        val bottom = row()
+        bottom.addView(key("🌐", "", 1.2f, keyBg) { listener.onNextKeyboard() })
+        bottom.addView(key("abc", "", 1.4f, keyBg) { letters = false; render() })
+        bottom.addView(key(if (page == 0) "अ१" else "कख", "", 1.4f, keyBg) { page = 1 - page; render() })
+        bottom.addView(key("space", "", 4f, keyBg) { listener.onInsert(" ") })
+        bottom.addView(key("↵", "", 1.5f, accent) { listener.onEnter() })
+        rowsBox.addView(bottom)
+    }
+
+    /** Long-press choices above a key; each types its roman keys. */
+    private fun showMore(anchor: View, more: List<Pair<String, String>>) {
+        popup?.dismiss()
+        val content = LinearLayout(context).apply {
+            orientation = HORIZONTAL
+            background = rounded(bg)
+            elevation = dp(8).toFloat()
+            setPadding(dp(4), dp(4), dp(4), dp(4))
+        }
+        val w = PopupWindow(content, LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT, true)
+        for ((labelText, keys) in more) {
+            content.addView(TextView(context).apply {
+                text = labelText
+                typeface = this@KeyboardView.typeface
+                setTextColor(ink)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+                gravity = Gravity.CENTER
+                background = rounded(keyBg)
+                contentDescription = "$labelText $keys"
+                setOnClickListener {
+                    it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+                    keys.forEach { c -> listener.onKey(c.toString()) }
+                    w.dismiss()
+                }
+            }, LayoutParams(dp(if (labelText.length > 2) 64 else 48), dp(50)).apply { setMargins(dp(2), 0, dp(2), 0) })
+        }
+        w.isOutsideTouchable = true
+        w.isClippingEnabled = false
+        content.measure(MeasureSpec.UNSPECIFIED, MeasureSpec.UNSPECIFIED)
+        w.showAsDropDown(anchor, 0, -(anchor.height + content.measuredHeight + dp(4)))
+        popup = w
     }
 
     private fun row() = LinearLayout(context).apply {
@@ -135,7 +204,16 @@ class KeyboardView(
     }
 
     @SuppressLint("ClickableViewAccessibility")
-    private fun key(main: String, small: String, weight: Float, color: Int, repeat: Boolean = false, onPress: () -> Unit): View {
+    private fun key(
+        main: String,
+        small: String,
+        weight: Float,
+        color: Int,
+        repeat: Boolean = false,
+        more: List<Pair<String, String>>? = null,
+        height: Int = 52,
+        onPress: () -> Unit,
+    ): View {
         val box = LinearLayout(context).apply {
             orientation = VERTICAL
             gravity = Gravity.CENTER
@@ -148,7 +226,7 @@ class KeyboardView(
             text = main
             typeface = this@KeyboardView.typeface
             setTextColor(if (color == accent) Color.WHITE else ink)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, if (main.length > 3) 14f else 21f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, if (main.length > 3) 14f else 20f)
             gravity = Gravity.CENTER
             includeFontPadding = false
         })
@@ -173,8 +251,16 @@ class KeyboardView(
             }
         } else {
             box.setOnClickListener { it.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); onPress() }
+            if (!more.isNullOrEmpty()) {
+                box.contentDescription = "${box.contentDescription}, hold for " + more.joinToString(" ") { it.first }
+                box.setOnLongClickListener {
+                    it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                    showMore(it, more)
+                    true
+                }
+            }
         }
-        box.layoutParams = LayoutParams(0, dp(52), weight).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) }
+        box.layoutParams = LayoutParams(0, dp(height), weight).apply { setMargins(dp(2), dp(3), dp(2), dp(3)) }
         return box
     }
 
@@ -191,6 +277,44 @@ class KeyboardView(
             listOf("q", "w", "e", "r", "t", "y", "u", "i", "o", "p"),
             listOf("a", "s", "d", "f", "g", "h", "j", "k", "l"),
             listOf("z", "x", "c", "v", "b", "n", "m"),
+        )
+
+        /** Long-press choices on a roman key: label to roman keys it types (same as web ROMAN_MORE). */
+        val ROMAN_MORE: Map<String, List<Pair<String, String>>> = mapOf(
+            "a" to listOf("आ ा" to "aa"), "i" to listOf("ई ी" to "ii"), "u" to listOf("ऊ ू" to "uu"),
+            "e" to listOf("ऐ ै" to "ai"), "o" to listOf("औ ौ" to "au"), "r" to listOf("ऋ ृ" to "R"),
+            "d" to listOf("ध" to "dh", "ड" to "D", "ढ" to "Dh"),
+            "t" to listOf("थ" to "th", "ट" to "T", "ठ" to "Th"),
+            "n" to listOf("ण" to "N", "ङ" to "ng", "ञ" to "yn", "ं" to "M", "ँ" to "~"),
+            "s" to listOf("श" to "sh", "ष" to "Sh", "क्ष" to "ksh"),
+            "c" to listOf("छ" to "chh"),
+            "k" to listOf("ख" to "kh", "क्ष" to "ksh"),
+            "g" to listOf("घ" to "gh", "ज्ञ" to "gy"),
+            "j" to listOf("झ" to "jh", "ज्ञ" to "gy"),
+            "p" to listOf("फ" to "ph"),
+            "b" to listOf("भ" to "bh", "व" to "w"),
+            "h" to listOf("ः" to "H", "्" to "_"),
+            "m" to listOf("ं" to "M", "ँ" to "~"),
+            "l" to listOf("ळ" to "L"),
+            "y" to listOf("ञ" to "yn"),
+        )
+
+        /** Letter pages (same as web LETTER_PAGES); each key types its label. */
+        val LETTER_PAGES: List<List<List<String>>> = listOf(
+            listOf(
+                listOf("ा", "ि", "ी", "ु", "ू", "ृ", "े", "ै", "ो", "ौ"),
+                listOf("क", "ख", "ग", "घ", "ङ", "च", "छ", "ज", "झ", "ञ"),
+                listOf("ट", "ठ", "ड", "ढ", "ण", "त", "थ", "द", "ध", "न"),
+                listOf("प", "फ", "ब", "भ", "म", "य", "र", "ल", "व", "श"),
+                listOf("ष", "स", "ह", "क्ष", "त्र", "ज्ञ", "्", "ं", "ँ"),
+            ),
+            listOf(
+                listOf("अ", "आ", "इ", "ई", "उ", "ऊ", "ऋ", "ए", "ऐ", "ओ"),
+                listOf("औ", "अं", "अः", "ः", "ऽ", "ॐ", "।", "॥", "ॠ", "ळ"),
+                listOf("१", "२", "३", "४", "५", "६", "७", "८", "९", "०"),
+                listOf("श्र", "द्ध", "द्य", "द्व", "ह्म", "ट्ट", "र्", "़", "ॄ", "?"),
+                listOf(",", ".", "!", "-", "(", ")", "\"", "'", "/"),
+            ),
         )
 
         /** What a roman key produces on its own in Romanized Nepali (labels only; same as web). */

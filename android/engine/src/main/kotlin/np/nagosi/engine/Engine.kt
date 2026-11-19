@@ -128,6 +128,11 @@ class Composer(var scheme: Scheme) {
         return word
     }
 
+    /** Start composing these roman keys again (undoing an automatic pick puts the word back). */
+    fun restore(buf: String) {
+        buffer = buf
+    }
+
     fun choose(word: String, trailing: String = " "): String {
         buffer = ""
         return word + trailing
@@ -145,12 +150,13 @@ object Skeleton {
         "ट" to "त", "ठ" to "थ", "ड" to "द", "ढ" to "ध", "ण" to "न", "ङ" to "न", "ञ" to "न",
         "ष" to "स", "श" to "स", "व" to "ब", "ं" to "न", "ँ" to "न", "ः" to "",
         "ृ" to "रि", "ऋ" to "रि", "ै" to "े", "ऐ" to "ए", "ौ" to "ो", "औ" to "ओ",
+        "ा" to "", "आ" to "अ", "छ" to "च",
         "्" to "", "़" to "", "‌" to "", "‍" to "",
     )
 
     fun of(word: String): String {
         val sb = StringBuilder()
-        for (ch in nfd(nfc(word))) {
+        for (ch in nfd(nfc(word).replace("ज्ञ", "ग्य"))) {
             val s = ch.toString()
             sb.append(FOLD[s] ?: s)
         }
@@ -163,15 +169,22 @@ class Suggester(entries: List<Pair<String, Int>> = emptyList()) {
 
     private var items = mutableListOf<Item>()
     private val learned = HashMap<String, Int>()
+    private val freqOf = HashMap<String, Int>()
 
     init { add(entries) }
 
     val size get() = items.size
 
     fun add(entries: List<Pair<String, Int>>) {
-        entries.forEach { (w, f) -> items.add(Item(Skeleton.of(w), w, f)) }
+        entries.forEach { (w, f) ->
+            items.add(Item(Skeleton.of(w), w, f))
+            freqOf[w] = maxOf(f, freqOf[w] ?: 0)
+        }
         items.sortWith(compareBy<Item> { it.key }.thenByDescending { it.freq })
     }
+
+    /** Times the user chose a word (weighted heavily), then its corpus count. */
+    fun weight(word: String): Double = (learned[word] ?: 0) * 1e6 + (freqOf[word] ?: 0)
 
     fun learn(word: String) {
         learned[word] = (learned[word] ?: 0) + 1
@@ -198,10 +211,10 @@ class Suggester(entries: List<Pair<String, Int>> = emptyList()) {
         }
         val pool = ArrayList<Item>()
         var i = lo
-        while (i < items.size && pool.size < 4000 && items[i].key.startsWith(key)) pool.add(items[i++])
+        while (i < items.size && pool.size < 20000 && items[i].key.startsWith(key)) pool.add(items[i++])
         fun score(it: Item): Double =
-            (if (it.word == composed) 1e12 else 0.0) + (if (it.key == key) 1e9 else 0.0) +
-                (learned[it.word] ?: 0) * 1e6 + it.freq
+            (if (it.key == key) 1e9 else 0.0) + (learned[it.word] ?: 0) * 1e6 + it.freq +
+                (if (it.word == composed) 0.5 else 0.0)
         pool.sortWith(compareByDescending<Item> { score(it) }.thenBy { it.word.length })
         return pool.map { it.word }.distinct().take(limit)
     }

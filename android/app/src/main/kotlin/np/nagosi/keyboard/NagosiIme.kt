@@ -10,6 +10,8 @@ import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import np.nagosi.engine.Composer
 import np.nagosi.engine.Scheme
+import np.nagosi.engine.Speller
+import np.nagosi.engine.Spellings
 import np.nagosi.engine.Suggester
 import org.json.JSONObject
 
@@ -17,8 +19,10 @@ import org.json.JSONObject
  * The Nagosi input method. Typing works fully offline: the scheme, dictionary and font are bundled
  * assets (copied from the repository at build time, see app/build.gradle.kts).
  *
- * Roman keys update an inline composing word (setComposingText); space, enter or punctuation
- * commits it; a suggestion tap replaces it. Backspace removes the last roman key while composing.
+ * Roman keys update an inline composing word (setComposingText). Space, enter or punctuation
+ * commits it: for loosely typed Romanized Nepali the best dictionary word ("dhakal" → ढकाल), and a
+ * Backspace straight after puts the typed word back. A suggestion tap replaces the word. Backspace
+ * removes the last roman key while composing. The कख page types Devanagari letters directly.
  */
 class NagosiIme : InputMethodService() {
     private lateinit var composer: Composer
@@ -26,6 +30,14 @@ class NagosiIme : InputMethodService() {
     private val dictionaries = HashMap<String, Suggester>()
     private var keyboard: KeyboardView? = null
     private lateinit var typeface: Typeface
+    private val speller: Speller by lazy { NagosiAssets.speller(this) }
+
+    /** Last automatic pick (text committed, roman typed), so an immediate Backspace can undo it. */
+    private var autoPick: Pair<String, String>? = null
+    /** After an undo, the next commit keeps the typed spelling. */
+    private var keepStrict = false
+    /** Letters are being typed directly on the कख page: suggest for the word before the cursor. */
+    private var direct = false
 
     private val prefs by lazy { getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
@@ -57,6 +69,7 @@ class NagosiIme : InputMethodService() {
     override fun onCreateInputView(): View {
         val view = KeyboardView(this, typeface, object : KeyboardView.Listener {
             override fun onKey(ch: String) = type(ch)
+            override fun onInsert(text: String) = insert(text)
             override fun onBackspace() = backspace()
             override fun onSuggestion(word: String) = choose(word)
             override fun onSwitchScheme() = cycleScheme()
@@ -71,6 +84,9 @@ class NagosiIme : InputMethodService() {
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
         composer.flush()
+        autoPick = null
+        keepStrict = false
+        direct = false
         composer.scheme = scheme(romanSchemeId()) // the setup screen may have changed it
         keyboard?.setScheme(currentSchemeId())
     }
@@ -84,27 +100,60 @@ class NagosiIme : InputMethodService() {
     // ---------------------------------------------------------------- editing
     private fun type(ch: String) {
         val ic = currentInputConnection ?: return
+        autoPick = null
+        direct = false
         if (currentSchemeId() == "inscript") {
             ic.commitText(NagosiAssets.inscript(this)[ch] ?: ch, 1)
             return
         }
-        val r = composer.key(ch)
-        if (r.commit.isNotEmpty()) {
-            ic.commitText(r.commit, 1)
-            val word = r.commit.trimEnd { it !in 'ऀ'..'ॿ' }
-            if (word.isNotEmpty()) dictionary().learn(word)
-            updateSuggestions()
+        if (ch in Composer.COMMIT_KEYS) {
+            val roman = composer.buffer
+            val composing = composer.composing
+            val pick = if (keepStrict) composing else Spellings.commitWord(roman, composing, composer.scheme, dictionary(), speller)
+            composer.key(ch)
+            ic.commitText(pick + ch, 1)
+            if (pick != composing) autoPick = (pick + ch) to roman
+            else if (pick.isNotEmpty()) dictionary().learn(pick)
+            keepStrict = false
         } else {
-            ic.setComposingText(r.composing, 1)
-            updateSuggestions()
+            ic.setComposingText(composer.key(ch).composing, 1)
         }
+        updateSuggestions()
+    }
+
+    /** Text from the letter page, committed as is. */
+    private fun insert(text: String) {
+        val ic = currentInputConnection ?: return
+        if (composer.buffer.isNotEmpty()) commitComposing()
+        autoPick = null
+        keepStrict = false
+        if (text == "\n") {
+            enter()
+            return
+        }
+        ic.commitText(text, 1)
+        direct = text.any { it in 'ऀ'..'ॿ' }
+        updateSuggestions()
     }
 
     private fun backspace() {
         val ic = currentInputConnection ?: return
+        val undo = autoPick
+        autoPick = null
+        if (undo != null && composer.buffer.isEmpty() && ic.getTextBeforeCursor(undo.first.length, 0)?.toString() == undo.first) {
+            ic.deleteSurroundingText(undo.first.length, 0)
+            composer.restore(undo.second)
+            ic.setComposingText(composer.composing, 1)
+            keepStrict = true
+            updateSuggestions()
+            return
+        }
         if (composer.backspace()) {
             val c = composer.composing
-            if (c.isEmpty()) ic.commitText("", 1) else ic.setComposingText(c, 1)
+            if (c.isEmpty()) {
+                ic.commitText("", 1)
+                keepStrict = false
+            } else ic.setComposingText(c, 1)
         } else if (Build.VERSION.SDK_INT >= 24) {
             val sel = ic.getSelectedText(0)
             if (!sel.isNullOrEmpty()) ic.commitText("", 1) else ic.deleteSurroundingTextInCodePoints(1, 0)
@@ -128,10 +177,25 @@ class NagosiIme : InputMethodService() {
     }
 
     private fun choose(word: String) {
-        currentInputConnection?.commitText(composer.choose(word), 1)
+        val ic = currentInputConnection ?: return
+        autoPick = null
+        keepStrict = false
+        if (composer.buffer.isNotEmpty()) {
+            ic.commitText(composer.choose(word), 1)
+        } else if (direct) {
+            val run = directWord()
+            if (run.isNotEmpty()) ic.deleteSurroundingText(run.length, 0)
+            ic.commitText("$word ", 1)
+            direct = false
+        } else return
         dictionary().learn(word)
         updateSuggestions()
     }
+
+    private val devanagariRun = Regex("[\u0900-\u0963\u0971-\u097F\u200C\u200D]+$")
+
+    private fun directWord(): String =
+        currentInputConnection?.getTextBeforeCursor(48, 0)?.let { devanagariRun.find(it)?.value } ?: ""
 
     private fun commitComposing() {
         if (composer.buffer.isNotEmpty()) currentInputConnection?.commitText(composer.flush(), 1)
@@ -140,7 +204,18 @@ class NagosiIme : InputMethodService() {
 
     private fun updateSuggestions() {
         val composing = composer.composing
-        keyboard?.showSuggestions(composing, if (composing.isEmpty()) emptyList() else dictionary().suggest(composing, 5))
+        if (composing.isEmpty() && direct) {
+            val word = directWord()
+            val found = if (word.isEmpty()) emptyList() else dictionary().suggest(word, 40)
+            val exact = found.filter { it.startsWith(word) && it != word }
+            keyboard?.showSuggestions(word, (exact + found.filter { it !in exact }).take(6))
+            return
+        }
+        keyboard?.showSuggestions(
+            composing,
+            if (composing.isEmpty()) emptyList()
+            else Spellings.candidates(composer.buffer, composing, composer.scheme, dictionary(), speller, 6),
+        )
     }
 
     private fun cycleScheme() {
@@ -171,7 +246,7 @@ class NagosiIme : InputMethodService() {
     // ---------------------------------------------------------------- hardware keyboards
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
         if (event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) return super.onKeyDown(keyCode, event)
-        if (keyCode == KeyEvent.KEYCODE_DEL && composer.buffer.isNotEmpty()) {
+        if (keyCode == KeyEvent.KEYCODE_DEL && (composer.buffer.isNotEmpty() || autoPick != null)) {
             backspace()
             return true
         }

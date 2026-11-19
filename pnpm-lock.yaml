@@ -8,6 +8,8 @@ importers:
 
   .: {}
 
+  cdn: {}
+
   engine:
     devDependencies:
       typescript:

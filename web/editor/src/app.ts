@@ -1,4 +1,5 @@
-import { Suggester, iast, toRoman, type DictionaryEntry } from "@nagosi/engine";
+import { Speller, Suggester, iast, toRoman, type DictionaryEntry } from "@nagosi/engine";
+import bigrams from "@nagosi/engine/dictionaries/bigrams.json";
 import neDict from "@nagosi/engine/dictionaries/ne.json";
 import saDict from "@nagosi/engine/dictionaries/sa.json";
 import { NagosiInput, OnScreenKeyboard, type SchemeId } from "@nagosi/keyboard";
@@ -28,8 +29,10 @@ const dictionaries: Record<string, Suggester> = {
   sa: new Suggester(saDict as DictionaryEntry[]),
 };
 
+const speller = new Speller(bigrams as Record<string, number>);
+
 const HINTS: Record<string, string> = {
-  "nepali-roman": "Type as you would in chat: <kbd>namaste</kbd> → नमस्ते, <kbd>nepaal</kbd> → नेपाल, <kbd>kaaThamaaDauM</kbd> → काठमाडौं. Capitals: <kbd>T D N Sh</kbd> = ट ड ण ष. <kbd>~</kbd> ँ, <kbd>M</kbd> ं, <kbd>_</kbd> halant, <kbd>.</kbd> । <kbd>Tab</kbd> takes the first suggestion.",
+  "nepali-roman": "Type the way it sounds: <kbd>dhakal</kbd> → ढकाल, <kbd>nepal</kbd> → नेपाल, <kbd>tapai</kbd> → तपाईं. Space takes the best dictionary word; <kbd>Backspace</kbd> right after puts back what you typed. Tap a suggestion for another spelling. To force a letter use capitals (<kbd>T D N Sh</kbd> = ट ड ण ष, <kbd>Dhakaal</kbd>), or hold a key on the on-screen keyboard, or switch it to <b>कख</b> and tap the letters. <kbd>~</kbd> ँ, <kbd>M</kbd> ं, <kbd>_</kbd> halant, <kbd>.</kbd> ।",
   iast: "Type IAST with diacritics: <kbd>dharmakṣetre</kbd> → धर्मक्षेत्रे, <kbd>saṃskṛtam</kbd> → संस्कृतम्. A final consonant gets a halant. <kbd>|</kbd> । <kbd>||</kbd> ॥",
   itrans: "ITRANS in plain ASCII: <kbd>dharmakShetre</kbd> → धर्मक्षेत्रे, <kbd>raamaH</kbd> → रामः, <kbd>.N</kbd> ँ, <kbd>.h</kbd> halant.",
   "harvard-kyoto": "Harvard-Kyoto in plain ASCII: <kbd>dharmakSetre</kbd> → धर्मक्षेत्रे, <kbd>zivaH</kbd> → शिवः.",
@@ -40,11 +43,11 @@ const HINTS: Record<string, string> = {
 function renderSuggestions(state = input.state) {
   const { buffer, composing, suggestions } = state;
   suggestEl.replaceChildren();
-  if (!buffer) {
+  if (!buffer && !composing) {
     const p = document.createElement("span");
     p.className = "empty";
     p.textContent = schemeSel.value === "off" || schemeSel.value === "inscript"
-      ? "Suggestions appear while typing in a romanized input."
+      ? "Suggestions appear while typing in a romanized input or on the कख letter keys."
       : "Start typing: suggestions from the " + (langSel.value === "ne" ? "Nepali" : "Sanskrit") + " dictionary show here.";
     suggestEl.append(p);
     return;
@@ -74,6 +77,7 @@ function renderSuggestions(state = input.state) {
 const input = new NagosiInput(text, {
   scheme: "nepali-roman",
   suggester: dictionaries.ne,
+  speller,
   onChange: (st) => renderSuggestions(st),
 });
 const kbd = new OnScreenKeyboard($("kbd"), input);
@@ -117,7 +121,7 @@ function applyStyle() {
 
 schemeSel.addEventListener("change", () => {
   input.setScheme(schemeSel.value as SchemeId);
-  kbd.setLayout(schemeSel.value === "inscript" ? "inscript" : "roman");
+  if (kbd.currentLayout !== "letters") kbd.setLayout(schemeSel.value === "inscript" ? "inscript" : "roman");
   applyStyle();
   renderSuggestions();
   text.focus();

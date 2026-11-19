@@ -3,6 +3,7 @@ package np.nagosi.keyboard
 import android.content.Context
 import android.graphics.Typeface
 import np.nagosi.engine.Scheme
+import np.nagosi.engine.Speller
 import np.nagosi.engine.Suggester
 import org.json.JSONObject
 
@@ -21,6 +22,8 @@ object NagosiAssets {
     fun scheme(ctx: Context, id: String): Scheme = Scheme.fromJson(read(ctx, "schemes/$id.json"))
 
     fun dictionary(ctx: Context, lang: String): Suggester = Suggester.fromJson(read(ctx, "dictionaries/$lang.json"))
+
+    fun speller(ctx: Context): Speller = Speller.fromJson(read(ctx, "dictionaries/bigrams.json"))
 
     private fun layout(ctx: Context): JSONObject = inscript ?: JSONObject(read(ctx, "layouts/inscript.json")).also { inscript = it }
 

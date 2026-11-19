@@ -48,6 +48,7 @@ describe("Nagosi Type Studio", () => {
     type(" saba");
     expect(doc.querySelector("#suggest .composing").textContent).toBe("सब");
     expect([...doc.querySelectorAll("#suggest button")].map((b) => b.textContent.replace("Tab", ""))).toContain("सबै");
+    expect(doc.querySelector("#suggest button").textContent).not.toBe("");
     type("i ");
     expect(ta.value).toBe("नमस्ते सबै ");
   });
@@ -103,5 +104,71 @@ describe("Nagosi Type Studio", () => {
     ta.setSelectionRange(0, 0);
     type("kdlj");
     expect(ta.value).toBe("क्तर");
+  });
+});
+
+describe("typing a name like ढकाल, three ways", () => {
+  const setScheme = (v) => {
+    const sel = doc.getElementById("scheme");
+    sel.value = v;
+    sel.dispatchEvent(new win.Event("change"));
+  };
+  const clear = () => {
+    ta.value = "";
+    ta.setSelectionRange(0, 0);
+  };
+  const chips = () => [...doc.querySelectorAll("#suggest button")].map((b) => b.textContent.replace("Tab", ""));
+
+  it("loosely typed roman: Space picks the dictionary word, Backspace undoes it", () => {
+    setScheme("nepali-roman");
+    clear();
+    type("mero naam sushil dhakal ho ");
+    expect(ta.value).toBe("मेरो नाम सुशील ढकाल हो ");
+    clear();
+    type("dhakal");
+    expect(ta.value).toBe("धकल");
+    expect(chips()[0]).toBe("ढकाल");
+    type(" ");
+    expect(ta.value).toBe("ढकाल ");
+    backspace();
+    expect(ta.value).toBe("धकल"); // what was typed, still composing
+    type(" ");
+    expect(ta.value).toBe("धकल "); // the user's own spelling is kept this time
+  });
+
+  it("holding an on-screen key offers ढ", () => {
+    setScheme("nepali-roman");
+    if (doc.getElementById("kbd").hidden) doc.getElementById("kbd-toggle").click();
+    clear();
+    const key = (c) => [...doc.querySelectorAll("#kbd .nagosi-key")].find((b) => b.querySelector(".nagosi-key-sub")?.textContent === c);
+    key("d").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    const pop = doc.querySelector("#kbd .nagosi-pop");
+    expect([...pop.querySelectorAll(".nagosi-key-main")].map((m) => m.textContent)).toEqual(["ध", "ड", "ढ"]);
+    [...pop.querySelectorAll(".nagosi-key")].find((b) => b.textContent.startsWith("ढ")).click();
+    key("a").click(); key("k").click();
+    key("a").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    doc.querySelector("#kbd .nagosi-pop .nagosi-key").click(); // आ ा
+    key("l").click();
+    expect(ta.value).toBe("ढकाल");
+  });
+
+  it("the कख letter keys type letters directly and suggest the word", () => {
+    clear();
+    const letter = (t) => [...doc.querySelectorAll("#kbd .nagosi-key")].find((b) => b.querySelector(".nagosi-key-main")?.textContent === t);
+    letter("कख").click();
+    expect(doc.querySelector("#kbd").querySelector('[data-layout="letters"]') ?? doc.querySelector('#kbd .nagosi-kbd[data-layout="letters"]')).not.toBeNull();
+    for (const t of ["ढ", "क", "ा"]) letter(t).click();
+    expect(ta.value).toBe("ढका");
+    expect(chips()).toContain("ढकाल");
+    [...doc.querySelectorAll("#suggest button")].find((b) => b.textContent.endsWith("ढकाल")).click();
+    expect(ta.value).toBe("ढकाल ");
+    for (const t of ["न", "े", "प", "ा", "ल"]) letter(t).click();
+    expect(ta.value).toBe("ढकाल नेपाल");
+    letter("अ१").click();
+    letter("॥").click();
+    expect(ta.value).toBe("ढकाल नेपाल॥");
+    letter("कख").click();
+    letter("abc").click();
+    expect(doc.querySelector('#kbd .nagosi-kbd').dataset.layout).toBe("roman");
   });
 });

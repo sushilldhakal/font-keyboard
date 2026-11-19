@@ -4,9 +4,11 @@ import UIKit
 
 /// Nagosi keyboard extension. Works without Full Access: no network, everything is bundled.
 ///
-/// Roman keys update marked (composing) text in the host field via setMarkedText; space, return or
-/// punctuation commits; a suggestion tap replaces the composing word. Backspace removes the last
-/// roman key while composing.
+/// Roman keys update marked (composing) text in the host field via setMarkedText. Space, return or
+/// punctuation commits: for loosely typed Romanized Nepali the best dictionary word ("dhakal" →
+/// ढकाल), and a Backspace straight after puts the typed word back. A suggestion tap replaces the
+/// composing word. Backspace removes the last roman key while composing. Hold a roman key for its
+/// related letters (d → ध ड ढ). The कख page types Devanagari letters directly.
 final class KeyboardViewController: UIInputViewController {
     private enum Mode: String, CaseIterable { case nepali = "nepali-roman", iast, inscript }
 
@@ -15,6 +17,16 @@ final class KeyboardViewController: UIInputViewController {
     private var dictionaries: [String: Suggester] = [:]
     private var inscript: DirectLayout?
     private var shift = false
+    private lazy var speller: Speller? = try? Speller.bundled()
+    /// Last automatic pick (text committed, roman typed), so an immediate Backspace can undo it.
+    private var autoPick: (text: String, roman: String)?
+    /// After an undo, the next commit keeps the typed spelling.
+    private var keepStrict = false
+    /// Letters are being typed directly on the कख page.
+    private var direct = false
+    private var letters = false
+    private var page = 0
+    private var popup: UIView?
 
     private let suggestionBar = UIStackView()
     private let rowsStack = UIStackView()
@@ -34,6 +46,42 @@ final class KeyboardViewController: UIInputViewController {
         "Q": "क़", "W": "व", "E": "ै", "R": "ृ", "T": "ट", "Y": "य", "U": "ू", "I": "ी", "O": "ौ", "P": "प",
         "A": "ा", "S": "श", "D": "ड", "F": "फ", "G": "ग", "H": "ः", "J": "ज", "K": "क", "L": "ळ",
         "Z": "ज़", "X": "क्ष", "C": "छ", "V": "व", "B": "ब", "N": "ण", "M": "ं",
+    ]
+    /// Long-press choices on a roman key: label and the roman keys it types (same as web ROMAN_MORE).
+    private static let romanMore: [String: [(String, String)]] = [
+        "a": [("आ ा", "aa")], "i": [("ई ी", "ii")], "u": [("ऊ ू", "uu")], "e": [("ऐ ै", "ai")], "o": [("औ ौ", "au")],
+        "r": [("ऋ ृ", "R")],
+        "d": [("ध", "dh"), ("ड", "D"), ("ढ", "Dh")],
+        "t": [("थ", "th"), ("ट", "T"), ("ठ", "Th")],
+        "n": [("ण", "N"), ("ङ", "ng"), ("ञ", "yn"), ("ं", "M"), ("ँ", "~")],
+        "s": [("श", "sh"), ("ष", "Sh"), ("क्ष", "ksh")],
+        "c": [("छ", "chh")],
+        "k": [("ख", "kh"), ("क्ष", "ksh")],
+        "g": [("घ", "gh"), ("ज्ञ", "gy")],
+        "j": [("झ", "jh"), ("ज्ञ", "gy")],
+        "p": [("फ", "ph")],
+        "b": [("भ", "bh"), ("व", "w")],
+        "h": [("ः", "H"), ("्", "_")],
+        "m": [("ं", "M"), ("ँ", "~")],
+        "l": [("ळ", "L")],
+        "y": [("ञ", "yn")],
+    ]
+    /// Letter pages (same as web LETTER_PAGES); each key types its label.
+    private static let letterPages: [[[String]]] = [
+        [
+            ["ा", "ि", "ी", "ु", "ू", "ृ", "े", "ै", "ो", "ौ"],
+            ["क", "ख", "ग", "घ", "ङ", "च", "छ", "ज", "झ", "ञ"],
+            ["ट", "ठ", "ड", "ढ", "ण", "त", "थ", "द", "ध", "न"],
+            ["प", "फ", "ब", "भ", "म", "य", "र", "ल", "व", "श"],
+            ["ष", "स", "ह", "क्ष", "त्र", "ज्ञ", "्", "ं", "ँ"],
+        ],
+        [
+            ["अ", "आ", "इ", "ई", "उ", "ऊ", "ऋ", "ए", "ऐ", "ओ"],
+            ["औ", "अं", "अः", "ः", "ऽ", "ॐ", "।", "॥", "ॠ", "ळ"],
+            ["१", "२", "३", "४", "५", "६", "७", "८", "९", "०"],
+            ["श्र", "द्ध", "द्य", "द्व", "ह्म", "ट्ट", "र्", "़", "ॄ", "?"],
+            [",", ".", "!", "-", "(", ")", "\"", "'", "/"],
+        ],
     ]
 
     private lazy var font: UIFont = {
@@ -72,6 +120,9 @@ final class KeyboardViewController: UIInputViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         composer.flush() // a new field: start clean
+        autoPick = nil
+        keepStrict = false
+        direct = false
         updateSuggestions()
     }
 
@@ -86,29 +137,73 @@ final class KeyboardViewController: UIInputViewController {
     // MARK: editing
 
     private func type(_ ch: String) {
+        autoPick = nil
+        direct = false
         if mode == .inscript {
             textDocumentProxy.insertText(inscript?.keys[ch] ?? ch)
             return
         }
-        let r = composer.key(ch)
-        if !r.commit.isEmpty {
-            textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
-            textDocumentProxy.unmarkText()
-            textDocumentProxy.insertText(r.commit)
-            let word = r.commit.trimmingCharacters(in: CharacterSet(charactersIn: "\u{0900}"..."\u{097F}").inverted)
-            if !word.isEmpty { dictionary?.learn(word) }
+        if Composer.commitKeys.contains(ch) {
+            let roman = composer.buffer
+            let composing = composer.composing
+            let pick = keepStrict ? composing : Spellings.commitWord(roman, composing, composer.scheme, dictionary, speller)
+            composer.key(ch)
+            if !composing.isEmpty {
+                textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
+                textDocumentProxy.unmarkText()
+            }
+            textDocumentProxy.insertText(pick + ch)
+            if pick != composing { autoPick = (pick + ch, roman) } else if !pick.isEmpty { dictionary?.learn(pick) }
+            keepStrict = false
         } else {
+            let r = composer.key(ch)
             textDocumentProxy.setMarkedText(r.composing, selectedRange: NSRange(location: (r.composing as NSString).length, length: 0))
         }
         updateSuggestions()
     }
 
+    /// Text from the letter page, inserted as is.
+    private func insert(_ text: String) {
+        commitComposing()
+        autoPick = nil
+        keepStrict = false
+        textDocumentProxy.insertText(text)
+        direct = text.unicodeScalars.contains { (0x0900...0x097F).contains($0.value) }
+        updateSuggestions()
+    }
+
+    /// Deletes `text` from just before the cursor, checking the document after each step (a
+    /// deleteBackward may remove one code point or a whole cluster, depending on the host).
+    private func deleteBefore(_ text: String) -> Bool {
+        let before = Array((textDocumentProxy.documentContextBeforeInput ?? "").utf16)
+        let t = Array(text.utf16)
+        guard before.count >= t.count, Array(before.suffix(t.count)) == t else { return false }
+        let target = Array(before.dropLast(t.count).suffix(24))
+        for _ in 0..<(t.count + 2) {
+            let now = Array((textDocumentProxy.documentContextBeforeInput ?? "").utf16)
+            if target.isEmpty ? now.isEmpty : (now.count >= target.count && Array(now.suffix(target.count)) == target) { break }
+            textDocumentProxy.deleteBackward()
+        }
+        return true
+    }
+
     private func backspace() {
+        let undo = autoPick
+        autoPick = nil
+        if let undo, composer.buffer.isEmpty, deleteBefore(undo.text) {
+            composer.restore(undo.roman)
+            let c = composer.composing
+            textDocumentProxy.setMarkedText(c, selectedRange: NSRange(location: (c as NSString).length, length: 0))
+            keepStrict = true
+            updateSuggestions()
+            return
+        }
         if composer.backspace() {
             let c = composer.composing
             if c.isEmpty {
                 textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
                 textDocumentProxy.unmarkText()
+                keepStrict = false
             } else {
                 textDocumentProxy.setMarkedText(c, selectedRange: NSRange(location: (c as NSString).length, length: 0))
             }
@@ -118,10 +213,29 @@ final class KeyboardViewController: UIInputViewController {
         updateSuggestions()
     }
 
+    private func directWord() -> String {
+        let scalars = Array((textDocumentProxy.documentContextBeforeInput ?? "").unicodeScalars)
+        var i = scalars.count
+        while i > 0, (0x0900...0x0963).contains(scalars[i - 1].value) || (0x0971...0x097F).contains(scalars[i - 1].value)
+            || scalars[i - 1].value == 0x200C || scalars[i - 1].value == 0x200D { i -= 1 }
+        var s = ""
+        s.unicodeScalars.append(contentsOf: scalars[i...])
+        return s
+    }
+
     private func choose(_ word: String) {
-        textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
-        textDocumentProxy.unmarkText()
-        textDocumentProxy.insertText(composer.choose(word))
+        autoPick = nil
+        keepStrict = false
+        if !composer.buffer.isEmpty {
+            textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
+            textDocumentProxy.unmarkText()
+            textDocumentProxy.insertText(composer.choose(word))
+        } else if direct {
+            let run = directWord()
+            if !run.isEmpty { _ = deleteBefore(run) }
+            textDocumentProxy.insertText(word + " ")
+            direct = false
+        } else { return }
         dictionary?.learn(word)
         updateSuggestions()
     }
@@ -136,6 +250,7 @@ final class KeyboardViewController: UIInputViewController {
 
     private func cycleMode() {
         commitComposing()
+        letters = false
         let all = Mode.allCases
         mode = all[(all.firstIndex(of: mode)! + 1) % all.count]
         UserDefaults.standard.set(mode.rawValue, forKey: "scheme")
@@ -167,8 +282,18 @@ final class KeyboardViewController: UIInputViewController {
     private func updateSuggestions() {
         suggestionBar.arrangedSubviews.forEach { $0.removeFromSuperview() }
         let composing = composer.composing
-        guard !composing.isEmpty else { return }
-        for word in dictionary?.suggest(composing) ?? [] {
+        var words: [String] = []
+        if composing.isEmpty, direct {
+            let w = directWord()
+            guard !w.isEmpty else { return }
+            let found = dictionary?.suggest(w, limit: 40) ?? []
+            let exact = found.filter { $0.hasPrefix(w) && $0 != w }
+            words = Array((exact + found.filter { !exact.contains($0) }).prefix(6))
+        } else {
+            guard !composing.isEmpty else { return }
+            words = Spellings.candidates(composer.buffer, composing, composer.scheme, dictionary, speller, limit: 6)
+        }
+        for word in words {
             var config = UIButton.Configuration.filled()
             config.baseBackgroundColor = .secondarySystemBackground
             config.baseForegroundColor = .label
@@ -194,7 +319,15 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func render() {
+        popup?.removeFromSuperview()
+        popup = nil
         rowsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        heightConstraint?.constant = letters ? 318 : 300
+        rowsStack.spacing = letters ? 6 : 8
+        if letters {
+            renderLetters()
+            return
+        }
         let rows = mode == .inscript ? (inscript?.rows ?? Self.qwerty) : Self.qwerty
         for (i, keyRow) in rows.enumerated() {
             var keys: [(UIButton, CGFloat)] = []
@@ -205,11 +338,13 @@ final class KeyboardViewController: UIInputViewController {
             }
             for key in keyRow {
                 let (main, ch) = label(for: key)
-                keys.append((keyButton(main, sub: ch) { [weak self] in
+                let b = keyButton(main, sub: ch) { [weak self] in
                     guard let self else { return }
                     self.type(ch)
                     if self.shift { self.shift = false; self.render() }
-                }, 1))
+                }
+                if mode == .nepali, !shift, let more = Self.romanMore[key] { addHold(b, more) }
+                keys.append((b, 1))
             }
             if i == rows.count - 1 {
                 keys.append((keyButton("⌫", sub: "") { [weak self] in self?.backspace() }, 1.4))
@@ -217,17 +352,88 @@ final class KeyboardViewController: UIInputViewController {
             rowsStack.addArrangedSubview(row(keys, columns: Self.qwerty[0].count))
         }
         var bottom: [(UIButton, CGFloat)] = []
-        if needsInputModeSwitchKey {
-            let globe = keyButton("🌐", sub: "") {}
-            globe.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
-            bottom.append((globe, 1.2))
-        }
+        addGlobe(&bottom)
         let modeName = mode == .nepali ? "नेपाली" : (mode == .iast ? "IAST" : "INSCRIPT")
         bottom.append((keyButton(modeName, sub: "") { [weak self] in self?.cycleMode() }, 1.8))
+        bottom.append((keyButton("कख", sub: "") { [weak self] in self?.letters = true; self?.page = 0; self?.render() }, 1.2))
         bottom.append((keyButton("।", sub: "") { [weak self] in self?.type(self?.mode == .inscript ? ">" : "|") }, 1))
-        bottom.append((keyButton("space", sub: "") { [weak self] in self?.type(" ") }, 4))
+        bottom.append((keyButton("space", sub: "") { [weak self] in self?.type(" ") }, 3.4))
         bottom.append((keyButton("↵", sub: "", accent: true) { [weak self] in self?.type("\n") }, 1.6))
         rowsStack.addArrangedSubview(row(bottom, columns: nil))
+    }
+
+    private func renderLetters() {
+        let rows = Self.letterPages[page]
+        for (i, keyRow) in rows.enumerated() {
+            var keys: [(UIButton, CGFloat)] = keyRow.map { k in
+                (keyButton(k, sub: "", height: 42) { [weak self] in self?.insert(k) }, 1)
+            }
+            if i == rows.count - 1 {
+                keys.append((keyButton("⌫", sub: "", height: 42) { [weak self] in self?.backspace() }, 1.4))
+            }
+            rowsStack.addArrangedSubview(row(keys, columns: 10))
+        }
+        var bottom: [(UIButton, CGFloat)] = []
+        addGlobe(&bottom)
+        bottom.append((keyButton("abc", sub: "", height: 42) { [weak self] in self?.letters = false; self?.render() }, 1.4))
+        bottom.append((keyButton(page == 0 ? "अ१" : "कख", sub: "", height: 42) { [weak self] in
+            guard let self else { return }
+            self.page = 1 - self.page
+            self.render()
+        }, 1.4))
+        bottom.append((keyButton("space", sub: "", height: 42) { [weak self] in self?.insert(" ") }, 4))
+        bottom.append((keyButton("↵", sub: "", accent: true, height: 42) { [weak self] in self?.insert("\n") }, 1.6))
+        rowsStack.addArrangedSubview(row(bottom, columns: nil))
+    }
+
+    private func addGlobe(_ bottom: inout [(UIButton, CGFloat)]) {
+        guard needsInputModeSwitchKey else { return }
+        let globe = keyButton("🌐", sub: "", height: letters ? 42 : 46) {}
+        globe.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
+        bottom.append((globe, 1.2))
+    }
+
+    /// Hold a roman key to see its related letters above it; each types its roman keys.
+    private func addHold(_ b: UIButton, _ more: [(String, String)]) {
+        b.accessibilityHint = "Hold for " + more.map { $0.0 }.joined(separator: " ")
+        let g = UILongPressGestureRecognizer()
+        g.minimumPressDuration = 0.38
+        g.addAction { [weak self, weak b] g in
+            guard let self, let b, g.state == .began else { return }
+            self.showMore(above: b, more)
+        }
+        b.addGestureRecognizer(g)
+    }
+
+    private func showMore(above anchor: UIView, _ more: [(String, String)]) {
+        popup?.removeFromSuperview()
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 4
+        stack.isLayoutMarginsRelativeArrangement = true
+        stack.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4)
+        stack.backgroundColor = .secondarySystemBackground
+        stack.layer.cornerRadius = 10
+        stack.layer.shadowOpacity = 0.25
+        stack.layer.shadowRadius = 8
+        stack.layer.shadowOffset = CGSize(width: 0, height: 3)
+        for (label, keys) in more {
+            let b = keyButton(label, sub: keys) { [weak self] in
+                guard let self else { return }
+                keys.forEach { self.type(String($0)) }
+                self.popup?.removeFromSuperview()
+                self.popup = nil
+            }
+            b.widthAnchor.constraint(equalToConstant: label.count > 2 ? 64 : 50).isActive = true
+            stack.addArrangedSubview(b)
+        }
+        view.addSubview(stack)
+        let size = stack.systemLayoutSizeFitting(UIView.layoutFittingCompressedSize)
+        let r = anchor.convert(anchor.bounds, to: view)
+        let x = min(max(0, r.midX - size.width / 2), view.bounds.width - size.width)
+        let y = max(0, r.minY - size.height - 4)
+        stack.frame = CGRect(x: x, y: y, width: size.width, height: size.height)
+        popup = stack
     }
 
     /// A row whose keys share one unit width: a key of weight 1.4 is 1.4 units wide. Letter rows use
@@ -260,14 +466,14 @@ final class KeyboardViewController: UIInputViewController {
         return wrap
     }
 
-    private func keyButton(_ title: String, sub: String, accent: Bool = false, action: @escaping () -> Void) -> UIButton {
+    private func keyButton(_ title: String, sub: String, accent: Bool = false, height: CGFloat = 46, action: @escaping () -> Void) -> UIButton {
         var config = UIButton.Configuration.filled()
         config.baseBackgroundColor = accent ? UIColor(red: 0.42, green: 0.18, blue: 0.64, alpha: 1) : .systemBackground
         config.baseForegroundColor = accent ? .white : .label
         config.cornerStyle = .medium
         config.contentInsets = NSDirectionalEdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0)
         var t = AttributedString(title)
-        t.font = title.count > 3 ? UIFont.systemFont(ofSize: 14) : font.withSize(21)
+        t.font = title.count > 3 ? UIFont.systemFont(ofSize: 14) : font.withSize(height < 46 ? 20 : 21)
         config.attributedTitle = t
         if !sub.isEmpty {
             var s = AttributedString(sub)
@@ -279,11 +485,26 @@ final class KeyboardViewController: UIInputViewController {
         let b = UIButton(configuration: config)
         b.accessibilityLabel = sub.isEmpty ? title : "\(title) \(sub)"
         b.addAction(UIAction { _ in UIDevice.current.playInputClick(); action() }, for: .touchUpInside)
-        b.heightAnchor.constraint(equalToConstant: 46).isActive = true
+        b.heightAnchor.constraint(equalToConstant: height).isActive = true
         return b
     }
 }
 
 extension KeyboardViewController: UIInputViewAudioFeedback {
     var enableInputClicksWhenVisible: Bool { true }
+}
+
+private extension UIGestureRecognizer {
+    /// Closure-based target for gesture recognizers.
+    func addAction(_ handler: @escaping (UIGestureRecognizer) -> Void) {
+        let box = GestureAction(handler)
+        addTarget(box, action: #selector(GestureAction.fire(_:)))
+        objc_setAssociatedObject(self, Unmanaged.passUnretained(box).toOpaque(), box, .OBJC_ASSOCIATION_RETAIN)
+    }
+}
+
+private final class GestureAction: NSObject {
+    let handler: (UIGestureRecognizer) -> Void
+    init(_ handler: @escaping (UIGestureRecognizer) -> Void) { self.handler = handler }
+    @objc func fire(_ g: UIGestureRecognizer) { handler(g) }
 }
