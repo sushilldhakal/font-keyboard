@@ -9,3 +9,10 @@ end
 target 'NagosiKeyboard' do
   pod 'GoogleMLKit/DigitalInkRecognition', '~> 7.0'
 end
+
+# Google's dependency pods declare iOS 9–12, which current Xcode rejects: build them for 16.
+post_install do |installer|
+  installer.pods_project.targets.each do |t|
+    t.build_configurations.each { |c| c.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '16.0' }
+  end
+end

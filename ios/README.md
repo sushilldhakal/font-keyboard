@@ -27,11 +27,21 @@ Keyboards: the ‹ › arrows on the space bar (or a swipe along it) switch betw
 खाली ठाउँ (space) to take the first one. Recognition is Google ML Kit Digital Ink, on the device; the
 Nepali model (~20 MB) downloads the first time ✍ is opened and then works offline.
 
-Handwriting on iOS needs ML Kit from CocoaPods (`ios/Podfile`):
-`./scripts/sync-resources.sh && xcodegen && pod install && open Nagosi.xcworkspace`. A keyboard can
+Handwriting on iOS needs ML Kit from CocoaPods (`ios/Podfile`, ML Kit Digital Ink 6.0.0):
+
+```bash
+brew install xcodegen cocoapods
+cd ios && ./scripts/sync-resources.sh && xcodegen
+LANG=en_US.UTF-8 pod install     # CocoaPods fails without a UTF-8 locale
+open Nagosi.xcworkspace
+```
+ A keyboard can
 only download the model with **Full Access**, so the extension now asks for it (`RequestsOpenAccess`);
 typing itself never uses the network. Without the pod, the ✍ pad opens and says ML Kit is missing.
-The ML Kit calls are written against its documented API but have not been compiled here.
+With the pods, the app and the keyboard extension build for the simulator
+(`xcodebuild -workspace Nagosi.xcworkspace -scheme Nagosi -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build`).
+Not yet run on a device: watch the extension's memory while handwriting, since iOS limits keyboards
+to roughly 50–70 MB.
 
 Status: the engine package passes its tests. The extension and the app type-check against the
 iOS 16 SDK. They have not run on a device or simulator yet.
