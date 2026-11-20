@@ -13,10 +13,13 @@ import MLKitDigitalInkRecognition
 final class HandwritingPad: UIView {
     enum State { case downloading, ready, unavailable(String) }
 
-    /// Recognised candidates for the current ink, best first.
-    var onCandidates: (([String]) -> Void)?
-    /// The user started a new word while candidates for the last one were showing.
-    var onNewWord: (() -> Void)?
+    /// The ink was recognised after a pause: candidates best first. The pad has already cleared
+    /// itself for the next letter; the keyboard types the best one and offers the rest.
+    var onRecognized: (([String]) -> Void)?
+    /// Text just before the cursor, which helps ML Kit (e.g. a matra after a consonant).
+    var preContext: (() -> String)?
+    /// Bumped by every change to the ink, so a late answer for older ink is dropped.
+    private var version = 0
     private(set) var isEmpty = true
 
     private let hint = UILabel()
@@ -105,7 +108,19 @@ final class HandwritingPad: UIView {
     }
     #endif
 
+    /// Backspace while writing: take back the last stroke.
+    func removeLastStroke() {
+        guard !strokes.isEmpty else { return }
+        timer?.invalidate()
+        strokes.removeLast()
+        version += 1
+        isEmpty = strokes.isEmpty
+        redraw()
+        if !isEmpty { timer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: false) { [weak self] _ in self?.recognize() } }
+    }
+
     func clear() {
+        version += 1
         strokes = []
         current = []
         isEmpty = true
@@ -125,7 +140,8 @@ final class HandwritingPad: UIView {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let t = touches.first else { return }
         timer?.invalidate()
-        if isEmpty { hint.text = ""; onNewWord?() }
+        if isEmpty { hint.text = "" }
+        version += 1
         current = [(t.location(in: self), Date().timeIntervalSince1970)]
     }
 
@@ -141,7 +157,9 @@ final class HandwritingPad: UIView {
         current = []
         isEmpty = false
         redraw()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.55, repeats: false) { [weak self] _ in self?.recognize() }
+        version += 1
+        // A pause after the last stroke ends the letter (multi-stroke letters are written faster).
+        timer = Timer.scheduledTimer(withTimeInterval: 0.75, repeats: false) { [weak self] _ in self?.recognize() }
     }
 
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { touchesEnded(touches, with: event) }
@@ -152,10 +170,20 @@ final class HandwritingPad: UIView {
         let ink = Ink(strokes: strokes.map { s in
             Stroke(points: s.map { StrokePoint(x: Float($0.0.x), y: Float($0.0.y), t: Int($0.1 * 1000)) })
         })
-        recognizer.recognize(ink: ink) { [weak self] result, _ in
+        let asked = version
+        let context = DigitalInkRecognitionContext(
+            preContext: String((preContext?() ?? "").suffix(20)),
+            writingArea: WritingArea(width: Float(bounds.width), height: Float(bounds.height)))
+        recognizer.recognize(ink: ink, context: context) { [weak self] result, _ in
             let words = result?.candidates.map { $0.text } ?? []
             var seen = Set<String>()
-            DispatchQueue.main.async { self?.onCandidates?(words.filter { seen.insert($0).inserted }.prefix(6).map { $0 }) }
+            let list = words.filter { !$0.isEmpty && seen.insert($0).inserted }.prefix(5).map { $0 }
+            DispatchQueue.main.async {
+                // Still the same ink and the finger is up: the letter is done.
+                guard let self, self.version == asked, self.current.isEmpty, !list.isEmpty else { return }
+                self.clear()
+                self.onRecognized?(list)
+            }
         }
         #endif
     }

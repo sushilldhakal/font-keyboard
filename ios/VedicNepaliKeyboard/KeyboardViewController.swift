@@ -113,7 +113,7 @@ final class KeyboardViewController: UIInputViewController {
             guard let self else { return }
             if self.writing { self.closeWriting() } else { self.openWriting() }
         }, for: .touchUpInside)
-        let top = UIStackView(arrangedSubviews: [gear, pen, makeSuggestionScroll()])
+        let top = UIStackView(arrangedSubviews: [gear, pen, makeSuggestionStrip()])
         top.axis = .horizontal
         top.spacing = 2
         let root = UIStackView(arrangedSubviews: [top, rowsStack])
@@ -302,22 +302,55 @@ final class KeyboardViewController: UIInputViewController {
 
     // MARK: UI
 
-    private func makeSuggestionScroll() -> UIView {
-        let scroll = UIScrollView()
-        scroll.showsHorizontalScrollIndicator = false
+    /// The suggestion strip: a plain row (no scroll view, whose iOS 26 edge effect blurred the
+    /// words), each word filling an equal share, the best one bold.
+    private func makeSuggestionStrip() -> UIView {
         suggestionBar.axis = .horizontal
-        suggestionBar.spacing = 6
-        suggestionBar.translatesAutoresizingMaskIntoConstraints = false
-        scroll.addSubview(suggestionBar)
-        NSLayoutConstraint.activate([
-            suggestionBar.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor, constant: 4),
-            suggestionBar.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor),
-            suggestionBar.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor),
-            suggestionBar.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor),
-            suggestionBar.heightAnchor.constraint(equalTo: scroll.frameLayoutGuide.heightAnchor),
-            scroll.heightAnchor.constraint(equalToConstant: 40),
-        ])
-        return scroll
+        suggestionBar.distribution = .fillEqually
+        suggestionBar.spacing = 0
+        suggestionBar.heightAnchor.constraint(equalToConstant: 40).isActive = true
+        return suggestionBar
+    }
+
+    private func stripButton(_ word: String, bold: Bool, action: @escaping () -> Void) -> UIButton {
+        let b = UIButton(type: .system)
+        b.setTitle(word, for: .normal)
+        b.setTitleColor(.label, for: .normal)
+        b.titleLabel?.font = bold ? UIFont.systemFont(ofSize: 20, weight: .semibold) : font.withSize(20)
+        b.titleLabel?.adjustsFontSizeToFitWidth = true
+        b.titleLabel?.minimumScaleFactor = 0.6
+        b.titleLabel?.lineBreakMode = .byClipping
+        b.contentEdgeInsets = UIEdgeInsets(top: 0, left: 4, bottom: 0, right: 4)
+        b.accessibilityLabel = word
+        b.addAction(UIAction { _ in UIDevice.current.playInputClick(); action() }, for: .touchUpInside)
+        return b
+    }
+
+    private func fillStrip(_ words: [String], bold: String?, action: @escaping (String) -> Void) {
+        suggestionBar.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for (i, w) in words.enumerated() {
+            if i > 0 {
+                let line = UIView()
+                line.backgroundColor = .separator
+                let holder = UIView()
+                holder.addSubview(line)
+                line.translatesAutoresizingMaskIntoConstraints = false
+                NSLayoutConstraint.activate([
+                    line.widthAnchor.constraint(equalToConstant: 1), line.heightAnchor.constraint(equalToConstant: 18),
+                    line.leadingAnchor.constraint(equalTo: holder.leadingAnchor), line.centerYAnchor.constraint(equalTo: holder.centerYAnchor),
+                ])
+                let b = stripButton(w, bold: w == bold) { action(w) }
+                holder.addSubview(b)
+                b.translatesAutoresizingMaskIntoConstraints = false
+                NSLayoutConstraint.activate([
+                    b.leadingAnchor.constraint(equalTo: holder.leadingAnchor, constant: 1), b.trailingAnchor.constraint(equalTo: holder.trailingAnchor),
+                    b.topAnchor.constraint(equalTo: holder.topAnchor), b.bottomAnchor.constraint(equalTo: holder.bottomAnchor),
+                ])
+                suggestionBar.addArrangedSubview(holder)
+            } else {
+                suggestionBar.addArrangedSubview(stripButton(w, bold: w == bold) { action(w) })
+            }
+        }
     }
 
     private func updateSuggestions() {
@@ -335,19 +368,7 @@ final class KeyboardViewController: UIInputViewController {
             guard !composing.isEmpty else { return }
             words = Spellings.candidates(composer.buffer, composing, composer.scheme, dictionary, speller, limit: 6)
         }
-        for word in words {
-            var config = UIButton.Configuration.filled()
-            config.baseBackgroundColor = .secondarySystemBackground
-            config.baseForegroundColor = .label
-            config.cornerStyle = .medium
-            config.contentInsets = NSDirectionalEdgeInsets(top: 2, leading: 12, bottom: 2, trailing: 12)
-            var t = AttributedString(word)
-            t.font = font.withSize(19)
-            config.attributedTitle = t
-            let b = UIButton(configuration: config)
-            b.addAction(UIAction { [weak self] _ in self?.choose(word) }, for: .touchUpInside)
-            suggestionBar.addArrangedSubview(b)
-        }
+        fillStrip(words, bold: words.first) { [weak self] w in self?.choose(w) }
     }
 
     private func label(for key: String) -> (main: String, ch: String) {
@@ -423,83 +444,69 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func closeWriting() {
-        commitInk(nil)
         writing = false
         pad = nil
+        forgetInk()
         render()
         updateSuggestions()
     }
 
-    /// Show the best guess in the text field as soon as it's recognised (marked text, like a
-    /// composing word), so the writer sees it where they're typing; a suggestion tap swaps it.
-    private func previewInk() {
-        let w = inkWords.first ?? ""
-        textDocumentProxy.setMarkedText(w, selectedRange: NSRange(location: (w as NSString).length, length: 0))
-    }
+    /// What handwriting last typed, so a suggestion tap can swap it.
+    private var inkTyped: String?
 
-    /// Keep a recognised word (the first candidate when nil) and clear the pad. Nothing is added
-    /// after it unless `then` says so, so letters written one after another stay together.
-    private func commitInk(_ word: String?, then: String = "") {
-        if let w = word ?? inkWords.first, pad?.isEmpty == false {
-            textDocumentProxy.setMarkedText(w, selectedRange: NSRange(location: (w as NSString).length, length: 0))
-            textDocumentProxy.unmarkText()
-        }
-        if !then.isEmpty { textDocumentProxy.insertText(then) }
-        inkWords = []
-        pad?.clear()
+    /// A letter was recognised (the pad has cleared itself): type the best guess straight into the
+    /// field, right after what's there (letters written one after another join up), and offer the
+    /// other guesses in the strip.
+    private func typeInk(_ words: [String]) {
+        guard let best = words.first else { return }
+        textDocumentProxy.insertText(best)
+        inkTyped = best
+        inkWords = words
         showInkWords()
     }
 
-    /// Throw away the ink and its guess in the field.
-    private func discardInk() {
-        if !inkWords.isEmpty {
-            textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
-            textDocumentProxy.unmarkText()
+    /// A suggestion tap: replace what was just typed with it.
+    private func swapInk(_ word: String) {
+        guard let typed = inkTyped, typed != word else { return }
+        if deleteBefore(typed) {
+            textDocumentProxy.insertText(word)
+            inkTyped = word
         }
-        inkWords = []
-        pad?.clear()
         showInkWords()
+    }
+
+    private func forgetInk() {
+        inkTyped = nil
+        inkWords = []
+        suggestionBar.arrangedSubviews.forEach { $0.removeFromSuperview() }
     }
 
     private func showInkWords() {
-        suggestionBar.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        for w in inkWords {
-            var config = UIButton.Configuration.filled()
-            config.baseBackgroundColor = .secondarySystemBackground
-            config.baseForegroundColor = .label
-            config.cornerStyle = .medium
-            var t = AttributedString(w)
-            t.font = font.withSize(19)
-            config.attributedTitle = t
-            let b = UIButton(configuration: config)
-            b.addAction(UIAction { [weak self] _ in self?.commitInk(w) }, for: .touchUpInside)
-            suggestionBar.addArrangedSubview(b)
-        }
+        fillStrip(Array(inkWords.prefix(5)), bold: inkTyped) { [weak self] w in self?.swapInk(w) }
     }
 
     private func renderWriting() {
         let p = pad ?? HandwritingPad(lang: english ? "en" : "ne", font: font, fullAccess: hasFullAccess)
         pad = p
-        p.onCandidates = { [weak self] words in
-            guard let self, self.pad?.isEmpty == false else { return }
-            self.inkWords = words
-            self.previewInk()
-            self.showInkWords()
-        }
-        p.onNewWord = { [weak self] in if self?.inkWords.isEmpty == false { self?.commitInk(nil) } }
+        p.onRecognized = { [weak self] words in self?.typeInk(words) }
+        p.preContext = { [weak self] in self?.textDocumentProxy.documentContextBeforeInput ?? "" }
         p.heightAnchor.constraint(equalToConstant: 190).isActive = true
         rowsStack.addArrangedSubview(p)
         var bottom: [(UIButton, CGFloat)] = []
         bottom.append((keyButton(current.phone ? "कख" : "abc", sub: "") { [weak self] in self?.closeWriting() }, 1.4))
-        bottom.append((keyButton("खाली ठाउँ", sub: "") { [weak self] in self?.commitInk(nil, then: " ") }, 4.4))
+        bottom.append((keyButton(english ? "." : "।", sub: "") { [weak self] in
+            self?.pad?.clear(); self?.forgetInk(); self?.textDocumentProxy.insertText(self?.english == true ? "." : "।")
+        }, 1))
+        bottom.append((keyButton("खाली ठाउँ", sub: "") { [weak self] in
+            self?.pad?.clear(); self?.forgetInk(); self?.textDocumentProxy.insertText(" ")
+        }, 3.6))
         bottom.append((keyButton("⌫", sub: "") { [weak self] in
             guard let self else { return }
-            if self.pad?.isEmpty == false { self.discardInk() } else { self.backspace() }
+            // While writing, take back the last stroke; otherwise delete text.
+            if self.pad?.isEmpty == false { self.pad?.removeLastStroke() } else { self.forgetInk(); self.textDocumentProxy.deleteBackward() }
         }, 1.4))
         bottom.append((keyButton("↵", sub: "", accent: true) { [weak self] in
-            guard let self else { return }
-            // With ink on the pad, ↵ keeps the word; only an empty pad starts a new line.
-            if self.pad?.isEmpty == false { self.commitInk(nil) } else { self.insert("\n") }
+            self?.pad?.clear(); self?.forgetInk(); self?.textDocumentProxy.insertText("\n")
         }, 1.5))
         rowsStack.addArrangedSubview(row(bottom, columns: nil))
     }
