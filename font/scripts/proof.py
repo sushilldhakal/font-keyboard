@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Render proof sheets (PNG) of a built font with HarfBuzz shaping, at several weights.
 
-  python font/scripts/proof.py font/builds/variable/Nagosi[wght].ttf
+  python font/scripts/proof.py font/builds/variable/VedicNepali[wght].ttf
 Writes font/builds/proof/{specimen,stacks,weights}.png for human review.
 """
 from __future__ import annotations
@@ -73,16 +73,16 @@ def main():
         render_lines(path, [(" ".join(stacks[:chunk]), 100, None), (" ".join(stacks[:chunk]), 900, None),
                             (" ".join(s + "ु" for s in stacks[:chunk]), 400, None)], OUT / "stacks-weights.png", size=56)
     specimen = [
-        ("नगोसी — नेपाली र संस्कृतका लागि", 700, None),
+        ("वैदिक नेपाली — नेपाली र संस्कृतका लागि", 700, None),
         ("सर्वे भवन्तु सुखिनः सर्वे सन्तु निरामयाः।", 400, None),
         ("अङ्गुलि  षड्गुण  तद्भव  उद्घाटन  वाङ्मय  ह्लाद", 400, None),
-        ("Nagosi: sarve bhavantu sukhinaḥ — ṛṣi, jñāna, śāstra 0123 १२३४", 400, None),
+        ("Vedic Nepali: sarve bhavantu sukhinaḥ — ṛṣi, jñāna, śāstra 0123 १२३४", 400, None),
         # one script per line: HarfBuzz picks the shaper from the first strong character
         ("झण्डा ५८९  लक्ष्मी शान्ति  भक्त वक्र", 400, None),
         ("झण्डा ५८९  लक्ष्मी शान्ति  भक्त वक्र", 400, {"ss01": True, "ss02": True, "ss03": True}),
     ]
     render_lines(path, specimen, OUT / "specimen.png", size=60)
-    weights = [(f"{w}  नमस्ते संस्कृतम् Nagosi", w, None) for w in (100, 200, 300, 400, 500, 600, 700, 800, 900)]
+    weights = [(f"{w}  नमस्ते संस्कृतम् Vedic Nepali", w, None) for w in (100, 200, 300, 400, 500, 600, 700, 800, 900)]
     render_lines(path, weights, OUT / "weights.png", size=52)
 
 

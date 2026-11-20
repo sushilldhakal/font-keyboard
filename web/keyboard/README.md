@@ -1,15 +1,15 @@
-# @nagosi/keyboard
+# @vedicnepali/keyboard
 
 Nepali and Sanskrit typing for any `<textarea>` or `<input>`.
 
 ```js
-import { NagosiInput, OnScreenKeyboard, Speller, Suggester } from "@nagosi/keyboard";
-import "@nagosi/keyboard/keyboard.css";
-import ne from "@nagosi/engine/dictionaries/ne.json";
-import bigrams from "@nagosi/engine/dictionaries/bigrams.json";
+import { VedicNepaliInput, OnScreenKeyboard, Speller, Suggester } from "@vedicnepali/keyboard";
+import "@vedicnepali/keyboard/keyboard.css";
+import ne from "@vedicnepali/engine/dictionaries/ne.json";
+import bigrams from "@vedicnepali/engine/dictionaries/bigrams.json";
 
 const field = document.querySelector("textarea");
-const input = new NagosiInput(field, {
+const input = new VedicNepaliInput(field, {
   scheme: "nepali-roman",            // "iast" | "itrans" | "harvard-kyoto" | "inscript" | "off"
   suggester: new Suggester(ne),
   speller: new Speller(bigrams),     // spelling variants for loosely typed words
@@ -30,5 +30,5 @@ new OnScreenKeyboard(document.querySelector("#kbd"), input);   // optional
   to the romanized keys, where holding a key gives related letters (`d` → ध ड ढ). `input.insert(text)`
   types Devanagari directly from your own UI.
 - Phone keyboards that compose Latin words (Gboard, SwiftKey) are converted word by word.
-  For full-time phone typing use the Nagosi Android and iOS keyboards.
-- Set `font-family: "Nagosi"` on the field (see `cdn/`) so conjuncts render in the classical style.
+  For full-time phone typing use the Vedic Nepali Android and iOS keyboards.
+- Set `font-family: "Vedic Nepali"` on the field (see `cdn/`) so conjuncts render in the classical style.

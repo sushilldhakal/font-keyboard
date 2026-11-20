@@ -1,5 +1,5 @@
 # One-letter words, common Nepali surnames, given names and places, added so they can be typed loosely
-# (paudel → पौडेल). One per line; lines starting with # are ignored. Written for Nagosi, MIT.
+# (paudel → पौडेल). One per line; lines starting with # are ignored. Written for Vedic Nepali, MIT.
 छ
 म
 र

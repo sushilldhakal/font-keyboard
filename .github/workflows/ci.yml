@@ -17,7 +17,7 @@ jobs:
       - run: python font/scripts/build.py --no-proof
       - run: python -m pytest tests/font -q
       - name: Committed font files match the build
-        run: git diff --stat --exit-code -- font/builds/stacks.txt cdn/nagosi.css cdn/nagosi-static.css
+        run: git diff --stat --exit-code -- font/builds/stacks.txt cdn/vedicnepali.css cdn/vedicnepali-static.css
 
   web:
     runs-on: ubuntu-latest
@@ -29,8 +29,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @nagosi/engine build
-      - run: pnpm --filter @nagosi/keyboard build
+      - run: pnpm --filter @vedicnepali/engine build
+      - run: pnpm --filter @vedicnepali/keyboard build
       - run: pnpm -r typecheck
       - run: pnpm -r test
 
@@ -51,8 +51,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Bundled iOS data matches engine/
-        run: ios/scripts/sync-resources.sh || true; git diff --stat --exit-code -- ios/NagosiEngine
-      - working-directory: ios/NagosiEngine
+        run: ios/scripts/sync-resources.sh || true; git diff --stat --exit-code -- ios/VedicNepaliEngine
+      - working-directory: ios/VedicNepaliEngine
         run: swift test
       - name: Build the app and keyboard extension (with ML Kit pods)
         working-directory: ios
@@ -63,5 +63,5 @@ jobs:
           brew install xcodegen
           xcodegen
           pod install
-          xcodebuild -workspace Nagosi.xcworkspace -scheme Nagosi -sdk iphonesimulator \
+          xcodebuild -workspace VedicNepali.xcworkspace -scheme Vedic Nepali -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

@@ -1,5 +1,5 @@
 /**
- * NagosiInput: turns any <textarea> or <input> into a Nepali/Sanskrit input field.
+ * VedicNepaliInput: turns any <textarea> or <input> into a Nepali/Sanskrit input field.
  *
  * Desktop: intercepts `beforeinput`, keeps the composing word inline and replaces it as each roman
  * key arrives. Space commits the best dictionary word for loosely typed Romanized Nepali
@@ -9,7 +9,7 @@
  */
 import {
   COMMIT_KEYS, Composer, Speller, Suggester, candidates, commitWord, layouts, schemes, transliterate,
-} from "@nagosi/engine";
+} from "@vedicnepali/engine";
 
 export type Field = HTMLTextAreaElement | HTMLInputElement;
 export type SchemeId = keyof typeof schemes | "inscript" | "off";
@@ -37,7 +37,7 @@ export interface InputOptions {
 
 const DEVANAGARI_RUN = /[ऀ-ॣॱ-ॿ‌‍]+$/;
 
-export class NagosiInput {
+export class VedicNepaliInput {
   readonly el: Field;
   private scheme: SchemeId;
   private composer: Composer;

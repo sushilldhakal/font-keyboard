@@ -1,51 +1,51 @@
-/* @nagosi/keyboard on-screen keyboard. Override the custom properties to theme it. */
-.nagosi-kbd {
+/* @vedicnepali/keyboard on-screen keyboard. Override the custom properties to theme it. */
+.vedicnepali-kbd {
   --nk-bg: #ecebf0; --nk-key: #ffffff; --nk-ink: #1d1b26; --nk-sub: #8a8698; --nk-on: #6b2fa3; --nk-on-ink: #fff;
   display: grid; gap: 6px; padding: 8px; background: var(--nk-bg); border-radius: 12px; user-select: none;
-  font-family: "Nagosi", "Noto Serif Devanagari", serif;
+  font-family: "Vedic Nepali", "Noto Serif Devanagari", serif;
 }
 @media (prefers-color-scheme: dark) {
-  .nagosi-kbd { --nk-bg: #24212c; --nk-key: #34303e; --nk-ink: #ece9f3; --nk-sub: #a29eb0; --nk-on: #c79cf0; --nk-on-ink: #1a1222; }
+  .vedicnepali-kbd { --nk-bg: #24212c; --nk-key: #34303e; --nk-ink: #ece9f3; --nk-sub: #a29eb0; --nk-on: #c79cf0; --nk-on-ink: #1a1222; }
 }
-.nagosi-row { display: flex; gap: 5px; justify-content: center; }
-.nagosi-key {
+.vedicnepali-row { display: flex; gap: 5px; justify-content: center; }
+.vedicnepali-key {
   flex: 1 1 0; min-width: 0; max-width: 64px; height: 50px; border: 0; border-radius: 8px; background: var(--nk-key); color: var(--nk-ink);
   box-shadow: 0 1px 0 rgba(0,0,0,.18); cursor: pointer; display: grid; place-items: center; padding: 2px 0; font: inherit;
 }
-.nagosi-key:active { transform: translateY(1px); box-shadow: none; }
-.nagosi-key:focus-visible { outline: 2px solid var(--nk-on); outline-offset: 1px; }
-.nagosi-key-main { font-size: 21px; line-height: 1.1; }
-.nagosi-key-sub { font: 10px ui-monospace, Menlo, monospace; color: var(--nk-sub); line-height: 1; }
-.nagosi-key.wide { flex-grow: 1.5; max-width: 96px; }
-.nagosi-key.space { flex-grow: 6; max-width: 360px; }
-.nagosi-key.space .nagosi-key-main { font-size: 13px; color: var(--nk-sub); }
-.nagosi-key.on { background: var(--nk-on); color: var(--nk-on-ink); }
-@media (max-width: 480px) { .nagosi-key { height: 44px; } .nagosi-key-main { font-size: 17px; } .nagosi-row { gap: 3px; } }
-.nagosi-kbd { position: relative; }
-.nagosi-key.has-more { position: relative; }
-.nagosi-key.has-more::after { content: ""; position: absolute; top: 5px; right: 6px; width: 4px; height: 4px; border-radius: 50%; background: var(--nk-sub); opacity: .7; }
-.nagosi-pop {
+.vedicnepali-key:active { transform: translateY(1px); box-shadow: none; }
+.vedicnepali-key:focus-visible { outline: 2px solid var(--nk-on); outline-offset: 1px; }
+.vedicnepali-key-main { font-size: 21px; line-height: 1.1; }
+.vedicnepali-key-sub { font: 10px ui-monospace, Menlo, monospace; color: var(--nk-sub); line-height: 1; }
+.vedicnepali-key.wide { flex-grow: 1.5; max-width: 96px; }
+.vedicnepali-key.space { flex-grow: 6; max-width: 360px; }
+.vedicnepali-key.space .vedicnepali-key-main { font-size: 13px; color: var(--nk-sub); }
+.vedicnepali-key.on { background: var(--nk-on); color: var(--nk-on-ink); }
+@media (max-width: 480px) { .vedicnepali-key { height: 44px; } .vedicnepali-key-main { font-size: 17px; } .vedicnepali-row { gap: 3px; } }
+.vedicnepali-kbd { position: relative; }
+.vedicnepali-key.has-more { position: relative; }
+.vedicnepali-key.has-more::after { content: ""; position: absolute; top: 5px; right: 6px; width: 4px; height: 4px; border-radius: 50%; background: var(--nk-sub); opacity: .7; }
+.vedicnepali-pop {
   position: absolute; z-index: 5; display: flex; gap: 4px; padding: 6px; background: var(--nk-bg); border-radius: 10px;
   box-shadow: 0 6px 20px rgba(0,0,0,.25);
 }
-.nagosi-pop .nagosi-key { width: 52px; flex: 0 0 auto; }
+.vedicnepali-pop .vedicnepali-key { width: 52px; flex: 0 0 auto; }
 /* Traditional keys: big letter in the middle, the hold letter small in the top-right corner. */
-.nagosi-key.phone { position: relative; }
-.nagosi-key.phone .nagosi-key-main { font-size: 23px; padding-top: 6px; }
-.nagosi-key.phone .nagosi-key-sub {
-  position: absolute; top: 4px; right: 5px; font: 11px "Nagosi", "Noto Serif Devanagari", serif; color: var(--nk-sub);
+.vedicnepali-key.phone { position: relative; }
+.vedicnepali-key.phone .vedicnepali-key-main { font-size: 23px; padding-top: 6px; }
+.vedicnepali-key.phone .vedicnepali-key-sub {
+  position: absolute; top: 4px; right: 5px; font: 11px "Vedic Nepali", "Noto Serif Devanagari", serif; color: var(--nk-sub);
 }
-.nagosi-kbd[data-kind="phone"] .nagosi-row { gap: 4px; }
-.nagosi-kbd[data-kind="phone"] .nagosi-key { height: 48px; }
+.vedicnepali-kbd[data-kind="phone"] .vedicnepali-row { gap: 4px; }
+.vedicnepali-kbd[data-kind="phone"] .vedicnepali-key { height: 48px; }
 /* Space bar keyboard switcher: ‹ name › */
-.nagosi-key.switcher { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
-.nagosi-key.switcher .nagosi-key-main { font-size: 14px; line-height: 1.6; color: var(--nk-ink); white-space: nowrap; }
-.nagosi-arrow { font-size: 22px; line-height: 1; color: var(--nk-sub); padding: 8px 8px; cursor: pointer; }
+.vedicnepali-key.switcher { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
+.vedicnepali-key.switcher .vedicnepali-key-main { font-size: 14px; line-height: 1.6; color: var(--nk-ink); white-space: nowrap; }
+.vedicnepali-arrow { font-size: 22px; line-height: 1; color: var(--nk-sub); padding: 8px 8px; cursor: pointer; }
 @media (max-width: 480px) {
-  .nagosi-kbd[data-kind="phone"] { padding: 6px 3px; }
-  .nagosi-kbd[data-kind="phone"] .nagosi-row { gap: 3px; }
-  .nagosi-kbd[data-kind="phone"] .nagosi-key { height: 44px; border-radius: 6px; }
-  .nagosi-key.switcher .nagosi-key-main { font-size: 12px; }
-  .nagosi-key.phone .nagosi-key-main { font-size: 19px; padding-top: 8px; }
-  .nagosi-key.phone .nagosi-key-sub { font-size: 9px; top: 1px; right: 2px; line-height: 1; }
+  .vedicnepali-kbd[data-kind="phone"] { padding: 6px 3px; }
+  .vedicnepali-kbd[data-kind="phone"] .vedicnepali-row { gap: 3px; }
+  .vedicnepali-kbd[data-kind="phone"] .vedicnepali-key { height: 44px; border-radius: 6px; }
+  .vedicnepali-key.switcher .vedicnepali-key-main { font-size: 12px; }
+  .vedicnepali-key.phone .vedicnepali-key-main { font-size: 19px; padding-top: 8px; }
+  .vedicnepali-key.phone .vedicnepali-key-sub { font-size: 9px; top: 1px; right: 2px; line-height: 1; }
 }

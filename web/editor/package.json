@@ -1,8 +1,8 @@
 {
-  "name": "@nagosi/editor",
+  "name": "@vedicnepali/editor",
   "version": "1.0.1",
   "private": true,
-  "description": "Nagosi online typing tool and font tester: one standalone HTML file with the font and engine inlined",
+  "description": "Vedic Nepali online typing tool and font tester: one standalone HTML file with the font and engine inlined",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -12,8 +12,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@nagosi/engine": "workspace:*",
-    "@nagosi/keyboard": "workspace:*"
+    "@vedicnepali/engine": "workspace:*",
+    "@vedicnepali/keyboard": "workspace:*"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

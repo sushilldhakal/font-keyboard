@@ -1,4 +1,4 @@
-# Nagosi font
+# Vedic Nepali font
 
 ## Design
 
@@ -7,7 +7,7 @@ Hybrid: modern readability with traditional Sanskrit identity.
 - **Base**: Noto Serif Devanagari 2.006 (OFL), a calm, high-contrast serif that reads well at text
   sizes and suits printed Sanskrit. Its 997 glyphs cover all of Devanagari, Devanagari Extended and
   Vedic Extensions.
-- **Width axis removed**: Nagosi varies on weight only (100–900). This keeps files small and every
+- **Width axis removed**: Vedic Nepali varies on weight only (100–900). This keeps files small and every
   generated glyph correct at every weight.
 - **Latin**: Noto Serif's Latin, Latin-1, Latin Extended-A and Extended Additional, so IAST
   transliteration (ā ī ū ṛ ṝ ḷ ḹ ṃ ḥ ṅ ñ ṭ ḍ ṇ ś ṣ) sets in the same family. Shared digits and
@@ -31,11 +31,11 @@ Hybrid: modern readability with traditional Sanskrit identity.
 ```
 
 1. Downloads the pinned upstream zips (`sources/upstream.json`) and checks their sha256.
-2. Pins `wdth=100`, merges Latin, generates stacks, adds stylistic sets, renames to Nagosi.
+2. Pins `wdth=100`, merges Latin, generates stacks, adds stylistic sets, renames to Vedic Nepali.
 3. Writes:
-   - `builds/variable/Nagosi[wght].ttf`: install on desktop, bundle in apps
-   - `builds/static/ttf/Nagosi-{Thin…Black}.ttf`: nine static weights for apps without variable font support
-   - `../cdn/fonts/…woff2` and `../cdn/nagosi.css`: web
+   - `builds/variable/VedicNepali[wght].ttf`: install on desktop, bundle in apps
+   - `builds/static/ttf/VedicNepali-{Thin…Black}.ttf`: nine static weights for apps without variable font support
+   - `../cdn/fonts/…woff2` and `../cdn/vedicnepali.css`: web
    - `builds/proof/*.png`: proof sheets to check by eye after every change
    - `builds/stacks.txt`: every generated conjunct and its glyph name
 

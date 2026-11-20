@@ -28,10 +28,10 @@ beforeAll(() => {
   ta = doc.getElementById("text");
 });
 
-describe("Nagosi Type Studio", () => {
+describe("Vedic Nepali Type Studio", () => {
   it("boots without script errors and fills the specimen", () => {
     expect(errors).toEqual([]);
-    expect(doc.title).toBe("Nagosi Type Studio");
+    expect(doc.title).toBe("Vedic Nepali Type Studio");
     expect(doc.querySelectorAll("#stacks .cell").length).toBeGreaterThan(150);
     expect(doc.querySelectorAll("#waterfall .row").length).toBe(9);
     expect(ta.value).toContain("नमस्ते");
@@ -67,12 +67,12 @@ describe("Nagosi Type Studio", () => {
     sel.dispatchEvent(new win.Event("change"));
     doc.getElementById("kbd-toggle").click();
     expect(doc.getElementById("kbd").hidden).toBe(false);
-    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("nepali-traditional"); // the default
-    doc.querySelector("#kbd .nagosi-arrow.next").click(); // space bar › → नेपाली (Roman)
-    expect(doc.querySelector("#kbd .switcher .nagosi-key-main").textContent).toBe("नेपाली (Roman)");
+    expect(doc.querySelector("#kbd .vedicnepali-kbd").dataset.layout).toBe("nepali-traditional"); // the default
+    doc.querySelector("#kbd .vedicnepali-arrow.next").click(); // space bar › → नेपाली (Roman)
+    expect(doc.querySelector("#kbd .switcher .vedicnepali-key-main").textContent).toBe("नेपाली (Roman)");
     ta.value = "";
     ta.setSelectionRange(0, 0);
-    const key = (c) => [...doc.querySelectorAll(".nagosi-key")].find((b) => b.querySelector(".nagosi-key-sub")?.textContent === c);
+    const key = (c) => [...doc.querySelectorAll(".vedicnepali-key")].find((b) => b.querySelector(".vedicnepali-key-sub")?.textContent === c);
     key("k").click(); key("a").click(); key("m").click(); key("a").click(); key("l").click();
     expect(ta.value).toBe("कमल");
   });
@@ -82,18 +82,18 @@ describe("Nagosi Type Studio", () => {
       sel.value = scheme;
       sel.dispatchEvent(new win.Event("change"));
       for (const shifted of [false, true]) {
-        const letters = [...doc.querySelectorAll("#kbd .nagosi-key")].filter((b) => /^[a-z]$/i.test(b.querySelector(".nagosi-key-sub")?.textContent ?? "")).length;
+        const letters = [...doc.querySelectorAll("#kbd .vedicnepali-key")].filter((b) => /^[a-z]$/i.test(b.querySelector(".vedicnepali-key-sub")?.textContent ?? "")).length;
         for (let i = 0; i < letters; i++) {
           ta.value = "";
           ta.setSelectionRange(0, 0);
-          if (shifted) doc.querySelector('#kbd .nagosi-key[aria-label="Shift"]').click();
-          const keys = [...doc.querySelectorAll("#kbd .nagosi-key")].filter((b) => /^[a-z]$/i.test(b.querySelector(".nagosi-key-sub")?.textContent ?? ""));
+          if (shifted) doc.querySelector('#kbd .vedicnepali-key[aria-label="Shift"]').click();
+          const keys = [...doc.querySelectorAll("#kbd .vedicnepali-key")].filter((b) => /^[a-z]$/i.test(b.querySelector(".vedicnepali-key-sub")?.textContent ?? ""));
           const k = keys[i];
-          const label = k.querySelector(".nagosi-key-main").textContent;
+          const label = k.querySelector(".vedicnepali-key-main").textContent;
           k.click();
-          doc.querySelector('#kbd .nagosi-key.space .nagosi-key-main').click();
+          doc.querySelector('#kbd .vedicnepali-key.space .vedicnepali-key-main').click();
           const out = ta.value.trim();
-          expect(out, `${scheme} ${shifted ? "shift+" : ""}${k.querySelector(".nagosi-key-sub").textContent}`).not.toMatch(/[A-Za-z]/);
+          expect(out, `${scheme} ${shifted ? "shift+" : ""}${k.querySelector(".vedicnepali-key-sub").textContent}`).not.toMatch(/[A-Za-z]/);
           if (scheme === "nepali-roman" && !/[\u093E-\u094C\u0902\u0903]/.test(label)) expect(out, "label matches output").toBe(label);
         }
       }
@@ -143,34 +143,34 @@ describe("typing a name like ढकाल, three ways", () => {
     setScheme("nepali-roman");
     if (doc.getElementById("kbd").hidden) doc.getElementById("kbd-toggle").click();
     clear();
-    const key = (c) => [...doc.querySelectorAll("#kbd .nagosi-key")].find((b) => b.querySelector(".nagosi-key-sub")?.textContent === c);
+    const key = (c) => [...doc.querySelectorAll("#kbd .vedicnepali-key")].find((b) => b.querySelector(".vedicnepali-key-sub")?.textContent === c);
     key("d").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
-    const pop = doc.querySelector("#kbd .nagosi-pop");
-    expect([...pop.querySelectorAll(".nagosi-key-main")].map((m) => m.textContent)).toEqual(["ध", "ड", "ढ"]);
-    [...pop.querySelectorAll(".nagosi-key")].find((b) => b.textContent.startsWith("ढ")).click();
+    const pop = doc.querySelector("#kbd .vedicnepali-pop");
+    expect([...pop.querySelectorAll(".vedicnepali-key-main")].map((m) => m.textContent)).toEqual(["ध", "ड", "ढ"]);
+    [...pop.querySelectorAll(".vedicnepali-key")].find((b) => b.textContent.startsWith("ढ")).click();
     key("a").click(); key("k").click();
     key("a").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
-    doc.querySelector("#kbd .nagosi-pop .nagosi-key").click(); // आ ा
+    doc.querySelector("#kbd .vedicnepali-pop .vedicnepali-key").click(); // आ ा
     key("l").click();
     expect(ta.value).toBe("ढकाल");
   });
 
   it("the Nepali traditional keys: tap for the letter, hold or Shift for the corner letter", () => {
     clear();
-    const kbdKey = (t) => [...doc.querySelectorAll("#kbd .nagosi-key")].find((b) => b.querySelector(".nagosi-key-main")?.textContent === t);
+    const kbdKey = (t) => [...doc.querySelectorAll("#kbd .vedicnepali-key")].find((b) => b.querySelector(".vedicnepali-key-main")?.textContent === t);
     const goTo = (label) => {
-      for (let i = 0; i < 6 && doc.querySelector("#kbd .switcher .nagosi-key-main").textContent !== label; i++) doc.querySelector("#kbd .nagosi-arrow.next").click();
-      expect(doc.querySelector("#kbd .switcher .nagosi-key-main").textContent).toBe(label);
+      for (let i = 0; i < 6 && doc.querySelector("#kbd .switcher .vedicnepali-key-main").textContent !== label; i++) doc.querySelector("#kbd .vedicnepali-arrow.next").click();
+      expect(doc.querySelector("#kbd .switcher .vedicnepali-key-main").textContent).toBe(label);
     };
     goTo("नेपाली");
-    expect(doc.querySelector("#kbd .nagosi-kbd").dataset.layout).toBe("nepali-traditional");
-    const rows = [...doc.querySelectorAll("#kbd .nagosi-row")].map((r) => [...r.querySelectorAll(".nagosi-key.phone .nagosi-key-main")].map((m) => m.textContent).join(""));
+    expect(doc.querySelector("#kbd .vedicnepali-kbd").dataset.layout).toBe("nepali-traditional");
+    const rows = [...doc.querySelectorAll("#kbd .vedicnepali-row")].map((r) => [...r.querySelectorAll(".vedicnepali-key.phone .vedicnepali-key-main")].map((m) => m.textContent).join(""));
     expect(rows.slice(0, 4)).toEqual(["ञघङझछटठडढण्", "धभचतथगषयउृे", "बकमानजवपिसु", "शहअखदलफ,र"]);
     for (const t of ["ढ", "क", "ा"]) kbdKey(t).click();
     expect(chips()).toContain("ढकाल");
     kbdKey("ल").click();
     expect(ta.value).toBe("ढकाल");
-    doc.querySelector('#kbd .nagosi-key.space .nagosi-key-main').click();
+    doc.querySelector('#kbd .vedicnepali-key.space .vedicnepali-key-main').click();
     // hold क → क्ष; ⇧ then ि → ी
     kbdKey("क").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
     kbdKey("ि").dispatchEvent(new win.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
@@ -186,7 +186,7 @@ describe("typing a name like ढकाल, three ways", () => {
     // वैदिक: vowels, varga consonants, svara marks; ⇧ turns vowels into signs
     goTo("वैदिक");
     expect(doc.getElementById("lang").value).toBe("sa");
-    const vrows = [...doc.querySelectorAll("#kbd .nagosi-row")].map((r) => [...r.querySelectorAll(".nagosi-key.phone .nagosi-key-main")].map((m) => m.textContent).join(" "));
+    const vrows = [...doc.querySelectorAll("#kbd .vedicnepali-row")].map((r) => [...r.querySelectorAll(".vedicnepali-key.phone .vedicnepali-key-main")].map((m) => m.textContent).join(" "));
     expect(vrows[0]).toBe("अं अ आ क च ट त प य श");
     expect(vrows[4]).toBe("ᳵ ३ ङ ञ ण न म ॐ");
     clear();
@@ -199,8 +199,8 @@ describe("typing a name like ढकाल, three ways", () => {
     // ‹ goes back; IAST is a roman keyboard
     goTo("Sanskrit (IAST)");
     expect(doc.getElementById("scheme").value).toBe("iast");
-    doc.querySelector("#kbd .nagosi-arrow.prev").click();
-    expect(doc.querySelector("#kbd .switcher .nagosi-key-main").textContent).toBe("वैदिक");
+    doc.querySelector("#kbd .vedicnepali-arrow.prev").click();
+    expect(doc.querySelector("#kbd .switcher .vedicnepali-key-main").textContent).toBe("वैदिक");
     goTo("नेपाली (Roman)");
     expect(doc.getElementById("scheme").value).toBe("nepali-roman");
     expect(doc.getElementById("lang").value).toBe("ne");

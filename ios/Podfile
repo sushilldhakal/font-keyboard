@@ -1,12 +1,12 @@
 # Handwriting (ML Kit Digital Ink, Nepali). Typing works without it.
-#   cd ios && ./scripts/sync-resources.sh && xcodegen && pod install && open Nagosi.xcworkspace
+#   cd ios && ./scripts/sync-resources.sh && xcodegen && pod install && open VedicNepali.xcworkspace
 platform :ios, '16.0'
 use_frameworks! :linkage => :static
 
-target 'Nagosi' do
+target 'VedicNepali' do
 end
 
-target 'NagosiKeyboard' do
+target 'VedicNepaliKeyboard' do
   pod 'GoogleMLKit/DigitalInkRecognition', '~> 7.0'
 end
 

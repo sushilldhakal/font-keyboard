@@ -1,5 +1,5 @@
 {
-  "_comment": "Pinned OFL-1.1 upstream sources Nagosi is derived from. Bump the version, url and sha256 together. The build refuses a download whose hash does not match.",
+  "_comment": "Pinned OFL-1.1 upstream sources Vedic Nepali is derived from. Bump the version, url and sha256 together. The build refuses a download whose hash does not match.",
   "devanagari": {
     "name": "Noto Serif Devanagari",
     "version": "2.006",

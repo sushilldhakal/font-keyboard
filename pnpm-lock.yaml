@@ -21,10 +21,10 @@ importers:
 
   web/editor:
     dependencies:
-      '@nagosi/engine':
+      '@vedicnepali/engine':
         specifier: workspace:*
         version: link:../../engine
-      '@nagosi/keyboard':
+      '@vedicnepali/keyboard':
         specifier: workspace:*
         version: link:../keyboard
     devDependencies:
@@ -43,7 +43,7 @@ importers:
 
   web/keyboard:
     dependencies:
-      '@nagosi/engine':
+      '@vedicnepali/engine':
         specifier: workspace:*
         version: link:../../engine
     devDependencies:

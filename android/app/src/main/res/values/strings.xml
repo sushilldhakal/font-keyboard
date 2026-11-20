@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Nagosi Keyboard</string>
-    <string name="ime_name">Nagosi नेपाली</string>
+    <string name="app_name">Vedic Nepali</string>
+    <string name="ime_name">Vedic Nepali</string>
     <string name="subtype_ne">Nepali (Romanized)</string>
     <string name="subtype_sa">Sanskrit (IAST)</string>
 </resources>

@@ -1,5 +1,5 @@
 {
-  "name": "@nagosi/keyboard",
+  "name": "@vedicnepali/keyboard",
   "version": "1.1.0",
   "description": "Nepali and Sanskrit typing for any web page: Romanized Nepali, IAST, ITRANS, Harvard-Kyoto and INSCRIPT input with suggestions and an on-screen keyboard",
   "license": "MIT",
@@ -18,7 +18,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@nagosi/engine": "workspace:*"
+    "@vedicnepali/engine": "workspace:*"
   },
   "devDependencies": {
     "typescript": "5.9.3"

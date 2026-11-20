@@ -1,8 +1,8 @@
-import { Speller, Suggester, iast, toRoman, type DictionaryEntry } from "@nagosi/engine";
-import bigrams from "@nagosi/engine/dictionaries/bigrams.json";
-import neDict from "@nagosi/engine/dictionaries/ne.json";
-import saDict from "@nagosi/engine/dictionaries/sa.json";
-import { KEYBOARDS, NagosiInput, OnScreenKeyboard, type SchemeId } from "@nagosi/keyboard";
+import { Speller, Suggester, iast, toRoman, type DictionaryEntry } from "@vedicnepali/engine";
+import bigrams from "@vedicnepali/engine/dictionaries/bigrams.json";
+import neDict from "@vedicnepali/engine/dictionaries/ne.json";
+import saDict from "@vedicnepali/engine/dictionaries/sa.json";
+import { KEYBOARDS, VedicNepaliInput, OnScreenKeyboard, type SchemeId } from "@vedicnepali/keyboard";
 import stacksTxt from "../../../font/builds/stacks.txt";
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -17,10 +17,10 @@ const romanEl = $("roman");
 
 const store = {
   get(k: string): string | null {
-    try { return localStorage.getItem("nagosi:" + k); } catch { return null; }
+    try { return localStorage.getItem("vedicnepali:" + k); } catch { return null; }
   },
   set(k: string, v: string) {
-    try { localStorage.setItem("nagosi:" + k, v); } catch { /* storage blocked: settings just don't persist */ }
+    try { localStorage.setItem("vedicnepali:" + k, v); } catch { /* storage blocked: settings just don't persist */ }
   },
 };
 
@@ -37,7 +37,7 @@ const HINTS: Record<string, string> = {
   itrans: "ITRANS in plain ASCII: <kbd>dharmakShetre</kbd> → धर्मक्षेत्रे, <kbd>raamaH</kbd> → रामः, <kbd>.N</kbd> ँ, <kbd>.h</kbd> halant.",
   "harvard-kyoto": "Harvard-Kyoto in plain ASCII: <kbd>dharmakSetre</kbd> → धर्मक्षेत्रे, <kbd>zivaH</kbd> → शिवः.",
   inscript: "INSCRIPT: each key types one letter or sign (k क, d ्, e ा). Shift for the second row of letters.",
-  off: "Input conversion is off: use your own Devanagari keyboard, or paste text to see it in Nagosi.",
+  off: "Input conversion is off: use your own Devanagari keyboard, or paste text to see it in Vedic Nepali.",
 };
 
 function renderSuggestions(state = input.state) {
@@ -74,7 +74,7 @@ function renderSuggestions(state = input.state) {
   });
 }
 
-const input = new NagosiInput(text, {
+const input = new VedicNepaliInput(text, {
   scheme: "nepali-roman",
   suggester: dictionaries.ne,
   speller,
@@ -166,7 +166,7 @@ $<HTMLButtonElement>("clear").addEventListener("click", () => {
 });
 
 // ------------------------------------------------------------------ specimen sections
-const SAMPLE_NE = "नमस्ते! म नगोसी हुँ — नेपाली र संस्कृत दुवैका लागि बनेको अक्षर।\nसर्वे भवन्तु सुखिनः सर्वे सन्तु निरामयाः।";
+const SAMPLE_NE = "नमस्ते! म वैदिक नेपाली हुँ — नेपाली र संस्कृत दुवैका लागि बनेको अक्षर।\nसर्वे भवन्तु सुखिनः सर्वे सन्तु निरामयाः।";
 const WATERFALL = "सर्वे भवन्तु सुखिनः · षड्गुण · Ṛgveda";
 
 function buildWaterfall() {
@@ -231,10 +231,10 @@ function buildCharset() {
 }
 
 const CSS_SNIPPET = `<link rel="stylesheet"
-  href="https://cdn.jsdelivr.net/gh/sushilldhakal/font-keyboard@v1.0.1/cdn/nagosi.css">
+  href="https://cdn.jsdelivr.net/gh/sushilldhakal/font-keyboard@v1.0.1/cdn/vedicnepali.css">
 
 <style>
-  body { font-family: "Nagosi", serif; }
+  body { font-family: "Vedic Nepali", serif; }
   /* optional */
   .nepali   { font-feature-settings: "ss01"; }        /* झ ५ ८ ९ */
   .sanskrit { font-feature-settings: "ss02", "ss03"; } /* ल श क्त */

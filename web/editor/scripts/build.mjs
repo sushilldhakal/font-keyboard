@@ -1,4 +1,4 @@
-// Bundle src/app.ts and inline it, the CSS and the Nagosi variable WOFF2 into one HTML file:
+// Bundle src/app.ts and inline it, the CSS and the Vedic Nepali variable WOFF2 into one HTML file:
 // dist/index.html works offline, on any static host, and as a Claude artifact.
 import * as esbuild from "esbuild";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
@@ -15,9 +15,9 @@ async function build() {
     bundle: true, minify: true, format: "iife", target: "es2020", write: false,
     loader: { ".json": "json", ".txt": "text" },
   });
-  const font = readFileSync(join(root, "cdn", "fonts", "Nagosi-Variable.woff2")).toString("base64");
+  const font = readFileSync(join(root, "cdn", "fonts", "VedicNepali-Variable.woff2")).toString("base64");
   const css = (readFileSync(join(root, "web", "keyboard", "src", "keyboard.css"), "utf8") + readFileSync(join(here, "src", "style.css"), "utf8"))
-    .replace("__NAGOSI_WOFF2__", `data:font/woff2;base64,${font}`);
+    .replace("__VEDICNEPALI_WOFF2__", `data:font/woff2;base64,${font}`);
   const html = readFileSync(join(here, "src", "index.html"), "utf8")
     .replace("/*__CSS__*/", () => css)
     .replace("/*__JS__*/", () => js.outputFiles[0].text.replace(/<\/script/gi, "<\\/script"));

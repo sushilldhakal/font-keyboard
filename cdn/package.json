@@ -1,10 +1,10 @@
 {
-  "name": "@nagosi/font",
+  "name": "@vedicnepali/font",
   "version": "1.0.1",
-  "description": "Nagosi: Nepali and Sanskrit Devanagari web font with classical conjuncts, IAST Latin and weights 100-900 (variable WOFF2 + static fallbacks)",
+  "description": "Vedic Nepali: Nepali and Sanskrit Devanagari web font with classical conjuncts, IAST Latin and weights 100-900 (variable WOFF2 + static fallbacks)",
   "license": "OFL-1.1",
-  "style": "nagosi.css",
-  "files": ["nagosi.css", "nagosi-static.css", "fonts", "OFL.txt"],
+  "style": "vedicnepali.css",
+  "files": ["vedicnepali.css", "vedicnepali-static.css", "fonts", "OFL.txt"],
   "keywords": ["font", "devanagari", "nepali", "sanskrit", "woff2", "variable-font"],
   "repository": { "type": "git", "url": "https://github.com/sushilldhakal/font-keyboard.git", "directory": "cdn" }
 }

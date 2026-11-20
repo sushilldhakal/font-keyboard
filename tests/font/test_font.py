@@ -10,7 +10,7 @@ from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parents[2]
 BUILDS = ROOT / "font" / "builds"
-VF = BUILDS / "variable" / "Nagosi[wght].ttf"
+VF = BUILDS / "variable" / "VedicNepali[wght].ttf"
 FIXTURES = ROOT / "tests" / "fixtures"
 
 pytestmark = pytest.mark.skipif(not VF.exists(), reason="build the font first")
@@ -56,7 +56,7 @@ def test_iast_and_latin_coverage():
 def test_axes_and_names():
     f = TTFont(VF)
     assert [(a.axisTag, a.minValue, a.defaultValue, a.maxValue) for a in f["fvar"].axes] == [("wght", 100, 400, 900)]
-    assert f["name"].getDebugName(1) == "Nagosi"
+    assert f["name"].getDebugName(1) == "Vedic Nepali"
     assert "Noto" not in (f["name"].getDebugName(6) or "")
     assert f["OS/2"].achVendID == "NGSI"
     assert "Open Font License" in f["name"].getDebugName(13)
@@ -64,10 +64,10 @@ def test_axes_and_names():
 
 @pytest.mark.parametrize("style,weight", [("Thin", 100), ("Regular", 400), ("Bold", 700), ("Black", 900)])
 def test_static_instances(style, weight):
-    f = TTFont(BUILDS / "static" / "ttf" / f"Nagosi-{style}.ttf")
+    f = TTFont(BUILDS / "static" / "ttf" / f"VedicNepali-{style}.ttf")
     assert "fvar" not in f
     assert f["OS/2"].usWeightClass == weight
-    assert f["name"].getDebugName(6) == f"Nagosi-{style}"
+    assert f["name"].getDebugName(6) == f"VedicNepali-{style}"
 
 
 def test_corpus_has_no_missing_glyphs():
@@ -125,7 +125,7 @@ def test_reph_and_i_matra_shape():
 import json as _json
 
 KEYBOARDS = sorted((ROOT / "engine" / "keyboards").glob("*.json"))
-# Standard Unicode a layout may insert that Nagosi leaves to the system font.
+# Standard Unicode a layout may insert that Vedic Nepali leaves to the system font.
 SYSTEM_FONT_ONLY = {"卐"}
 
 

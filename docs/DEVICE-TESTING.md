@@ -15,7 +15,7 @@ Devices to cover, at least:
 ## Setup and settings
 
 - [ ] App opens. "Open keyboard settings" / "Open Settings" goes to the right place.
-- [ ] Nagosi can be enabled and chosen (Android: input-method picker; iOS: 🌐 long-press).
+- [ ] Vedic Nepali can be enabled and chosen (Android: input-method picker; iOS: 🌐 long-press).
 - [ ] Picking a keyboard in the app opens that keyboard the next time a text field is tapped.
 - [ ] Turning off "Space picks the best word" makes `dhakal␣` stay धकल. Turning it on gives ढकाल.
 - [ ] "Forget learned words" removes a word you picked earlier from the suggestions.
@@ -37,7 +37,7 @@ Devices to cover, at least:
 ## वैदिक (direct Sanskrit with Vedic marks)
 
 - [ ] ⇧ turns the vowel keys into signs. Type गि॒रा॑, अ॒ग्निमी॑ळे.
-- [ ] ᳚ ᳛ ꣳ ᳲ ३ ऽ ॐ insert and draw (in Nagosi; other fonts may show boxes, which is a font matter, not input).
+- [ ] ᳚ ᳛ ꣳ ᳲ ३ ऽ ॐ insert and draw (in Vedic Nepali; other fonts may show boxes, which is a font matter, not input).
 - [ ] Sanskrit (IAST): `saṃskṛtam` gives संस्कृतम्.
 
 ## ✍ Handwriting
@@ -54,4 +54,4 @@ Devices to cover, at least:
 - [ ] Password fields: the system keyboard takes over (iOS), or no suggestions are learned (Android).
 - [ ] A hardware keyboard types roman into the composer (Android).
 - [ ] Switch to the system keyboard and back. Nothing is lost mid-word.
-- [ ] Copy text typed with Nagosi to a desktop. It is plain Devanagari: search finds it, and other fonts display it.
+- [ ] Copy text typed with Vedic Nepali to a desktop. It is plain Devanagari: search finds it, and other fonts display it.

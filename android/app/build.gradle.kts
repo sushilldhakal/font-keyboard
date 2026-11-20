@@ -12,11 +12,11 @@ val keystore = Properties().apply {
 }
 
 android {
-    namespace = "np.nagosi.keyboard"
+    namespace = "np.vedicnepali.keyboard"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "np.nagosi.keyboard"
+        applicationId = "np.vedicnepali.keyboard"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -45,24 +45,24 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 
-    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/nagosi-assets"))
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/vedicnepali-assets"))
 }
 
 // One source of truth: schemes, dictionaries and the font are copied from the repo at build time.
-val syncNagosiAssets by tasks.registering(Copy::class) {
+val syncVedicNepaliAssets by tasks.registering(Copy::class) {
     val repo = rootDir.parentFile
-    into(layout.buildDirectory.dir("generated/nagosi-assets/nagosi"))
+    into(layout.buildDirectory.dir("generated/vedicnepali-assets/vedicnepali"))
     from(File(repo, "engine/transliteration/schemes")) { into("schemes") }
     from(File(repo, "engine/transliteration/layouts")) { into("layouts") }
     from(File(repo, "engine/suggestions/data")) { into("dictionaries") }
     from(File(repo, "engine/keyboards")) { into("keyboards") }
     from(File(repo, "font/builds/variable")) {
-        include("Nagosi[wght].ttf")
-        rename { "Nagosi-Variable.ttf" }
+        include("VedicNepali[wght].ttf")
+        rename { "VedicNepali-Variable.ttf" }
         into("fonts")
     }
 }
-tasks.named("preBuild") { dependsOn(syncNagosiAssets) }
+tasks.named("preBuild") { dependsOn(syncVedicNepaliAssets) }
 
 dependencies {
     implementation(project(":engine"))

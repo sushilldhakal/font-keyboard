@@ -1,65 +1,65 @@
 # XcodeGen spec: `brew install xcodegen && cd ios && ./scripts/sync-resources.sh && xcodegen`
-name: Nagosi
+name: VedicNepali
 options:
-  bundleIdPrefix: np.nagosi
+  bundleIdPrefix: np.vedicnepali
   deploymentTarget:
     iOS: "16.0"
 packages:
-  NagosiEngine:
-    path: NagosiEngine
+  VedicNepaliEngine:
+    path: VedicNepaliEngine
 targets:
-  Nagosi:
+  VedicNepali:
     type: application
     platform: iOS
     sources:
-      - NagosiApp
+      - VedicNepaliApp
       - Shared
       - path: Fonts
         type: folder
         buildPhase: resources
     dependencies:
-      - package: NagosiEngine
-      - target: NagosiKeyboard
+      - package: VedicNepaliEngine
+      - target: VedicNepaliKeyboard
     entitlements:
-      path: NagosiApp/Nagosi.entitlements
+      path: VedicNepaliApp/VedicNepali.entitlements
       properties:
-        # install the Nagosi fonts for all apps (CTFontManagerRegisterFontURLs .persistent)
+        # install the Vedic Nepali fonts for all apps (CTFontManagerRegisterFontURLs .persistent)
         com.apple.developer.user-fonts: [system-installation]
-        # settings the app writes and the keyboard reads (NagosiSettings)
-        com.apple.security.application-groups: [group.np.nagosi.keyboard]
+        # settings the app writes and the keyboard reads (VedicNepaliSettings)
+        com.apple.security.application-groups: [group.np.vedicnepali.keyboard]
     info:
-      path: NagosiApp/Info.plist
+      path: VedicNepaliApp/Info.plist
       properties:
-        CFBundleDisplayName: Nagosi
+        CFBundleDisplayName: Vedic Nepali
         UILaunchScreen: {}
         UIApplicationSupportsIndirectInputEvents: true
     preBuildScripts:
       - script: '"$SRCROOT/scripts/sync-resources.sh"'
-        name: Sync Nagosi resources
+        name: Sync Vedic Nepali resources
         basedOnDependencyAnalysis: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: np.nagosi.keyboard
+        PRODUCT_BUNDLE_IDENTIFIER: np.vedicnepali.keyboard
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"
-  NagosiKeyboard:
+  VedicNepaliKeyboard:
     type: app-extension
     platform: iOS
     sources:
-      - NagosiKeyboard
+      - VedicNepaliKeyboard
       - Shared
-      - path: Fonts/Nagosi-Variable.ttf
+      - path: Fonts/VedicNepali-Variable.ttf
         buildPhase: resources
     dependencies:
-      - package: NagosiEngine
+      - package: VedicNepaliEngine
     entitlements:
-      path: NagosiKeyboard/NagosiKeyboard.entitlements
+      path: VedicNepaliKeyboard/VedicNepaliKeyboard.entitlements
       properties:
-        com.apple.security.application-groups: [group.np.nagosi.keyboard]
+        com.apple.security.application-groups: [group.np.vedicnepali.keyboard]
     info:
-      path: NagosiKeyboard/Info.plist
+      path: VedicNepaliKeyboard/Info.plist
       properties:
-        CFBundleDisplayName: Nagosi
+        CFBundleDisplayName: Vedic Nepali
         NSExtension:
           NSExtensionPointIdentifier: com.apple.keyboard-service
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).KeyboardViewController
@@ -71,6 +71,6 @@ targets:
             RequestsOpenAccess: true
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: np.nagosi.keyboard.extension
+        PRODUCT_BUNDLE_IDENTIFIER: np.vedicnepali.keyboard.extension
         MARKETING_VERSION: "1.0.0"
         CURRENT_PROJECT_VERSION: "1"

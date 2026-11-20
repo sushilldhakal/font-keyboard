@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Build the Nagosi font family.
+"""Build the Vedic Nepali font family.
 
 Pipeline (every step is deterministic and re-runnable):
   1. fetch    pinned OFL upstream fonts (font/sources/upstream.json), sha256-checked
-  2. pin      drop the width axis (wdth=100); Nagosi varies on weight only (100-900)
+  2. pin      drop the width axis (wdth=100); Vedic Nepali varies on weight only (100-900)
   3. latin    copy Latin, Latin-1, Latin Extended-A and the IAST letters from Noto Serif
   4. stacks   generate classical vertical conjuncts the upstream breaks with a visible halant
   5. features ss01 Nepali forms, ss02 classical ल/श, ss03 Sanskrit conjuncts (any language)
-  6. names    rename to Nagosi, version, vendor, OFL notice
+  6. names    rename to Vedic Nepali, version, vendor, OFL notice
   7. export   variable TTF/WOFF2, static TTF/WOFF2 for every weight, web subsets, proof PNGs
 
 Usage:  python font/scripts/build.py [--no-static] [--no-proof]
@@ -40,7 +40,8 @@ CACHE = FONT / ".cache"
 BUILDS = FONT / "builds"
 CDN = ROOT / "cdn"
 
-FAMILY = "Nagosi"
+FAMILY = "Vedic Nepali"
+STEM = "VedicNepali"  # file names and PostScript names: no spaces
 VERSION = "1.000"
 VENDOR = "NGSI"
 
@@ -60,7 +61,7 @@ HALANT = "uni094D"
 
 
 def log(msg: str) -> None:
-    print(f"[nagosi] {msg}", flush=True)
+    print(f"[vedicnepali] {msg}", flush=True)
 
 
 # --------------------------------------------------------------------------- 1. fetch
@@ -391,16 +392,16 @@ def rename(font: TTFont) -> None:
     old_copyright = name.getDebugName(0) or ""
     for rec in list(name.names):
         s = rec.toUnicode()
-        s2 = s.replace("Noto Serif Devanagari", FAMILY).replace("NotoSerifDevanagari", FAMILY)
+        s2 = s.replace("Noto Serif Devanagari", FAMILY).replace("NotoSerifDevanagari", STEM)
         if s2 != s:
             rec.string = s2
     name.removeNames(nameID=7)  # Noto trademark does not apply to the derivative
-    set_name(font, 0, f"Copyright 2026 The Nagosi Project Authors (https://github.com/sushilldhakal/font-keyboard). "
+    set_name(font, 0, f"Copyright 2026 The Vedic Nepali Project Authors (https://github.com/sushilldhakal/font-keyboard). "
                       f"Derived from Noto Serif Devanagari and Noto Serif: {old_copyright}")
     set_name(font, 3, f"{VERSION};{VENDOR};{FAMILY}")
     set_name(font, 5, f"Version {VERSION}")
-    set_name(font, 8, "Nagosi Project")
-    set_name(font, 10, "Nagosi: a Nepali and Sanskrit Devanagari typeface with classical conjuncts, "
+    set_name(font, 8, "Vedic Nepali Project")
+    set_name(font, 10, "Vedic Nepali: a Nepali and Sanskrit Devanagari typeface with classical conjuncts, "
                        "IAST Latin and weights 100 to 900. Derived from the Noto Serif family.")
     set_name(font, 11, "https://github.com/sushilldhakal/font-keyboard")
     set_name(font, 13, "This Font Software is licensed under the SIL Open Font License, Version 1.1. "
@@ -433,7 +434,7 @@ def export_static(vf_path: Path) -> list[Path]:
         family = FAMILY if style in ("Regular", "Bold") else f"{FAMILY} {style}"
         sub = style if style in ("Regular", "Bold") else "Regular"
         for nid, val in ((1, family), (2, sub), (4, f"{FAMILY} {style}"),
-                         (6, f"{FAMILY}-{style}"), (16, FAMILY), (17, style)):
+                         (6, f"{STEM}-{style}"), (16, FAMILY), (17, style)):
             set_name(inst, nid, val)
         if style in ("Regular", "Bold"):
             n.removeNames(nameID=16)
@@ -443,9 +444,9 @@ def export_static(vf_path: Path) -> list[Path]:
         os2.fsSelection &= ~0b1100001  # clear ITALIC/BOLD/REGULAR
         os2.fsSelection |= 0b100000 if style == "Bold" else (0b1000000 if style == "Regular" else 0)
         inst["head"].macStyle = 1 if style == "Bold" else 0
-        p = BUILDS / "static" / "ttf" / f"{FAMILY}-{style}.ttf"
+        p = BUILDS / "static" / "ttf" / f"{STEM}-{style}.ttf"
         save(inst, p)
-        save(inst, CDN / "fonts" / "static" / f"{FAMILY}-{style}.woff2", "woff2")
+        save(inst, CDN / "fonts" / "static" / f"{STEM}-{style}.woff2", "woff2")
         out.append(p)
     return out
 
@@ -468,34 +469,34 @@ def export_web_subsets(vf_path: Path) -> None:
         s = subset.Subsetter(opts)
         s.populate(unicodes=subset.parse_unicodes(uni))
         s.subset(f)
-        save(f, CDN / "fonts" / "subsets" / f"{FAMILY}-{key}-Variable.woff2", "woff2")
+        save(f, CDN / "fonts" / "subsets" / f"{STEM}-{key}-Variable.woff2", "woff2")
     write_css(ranges)
 
 
 def write_css(ranges: dict) -> None:
-    """cdn/nagosi.css: variable subsets by unicode-range (browsers fetch only the scripts a page uses).
-    cdn/nagosi-static.css: one file per weight for old browsers without variable font support."""
-    head = (f"/* Nagosi {VERSION} | SIL Open Font License 1.1 | https://github.com/sushilldhakal/font-keyboard */\n"
+    """cdn/vedicnepali.css: variable subsets by unicode-range (browsers fetch only the scripts a page uses).
+    cdn/vedicnepali-static.css: one file per weight for old browsers without variable font support."""
+    head = (f"/* Vedic Nepali {VERSION} | SIL Open Font License 1.1 | https://github.com/sushilldhakal/font-keyboard */\n"
             "/* Generated by font/scripts/build.py. Do not edit. */\n")
     css = head
     for key, uni in ranges.items():
-        css += ("@font-face {\n  font-family: \"Nagosi\";\n  font-style: normal;\n  font-weight: 100 900;\n"
+        css += ("@font-face {\n  font-family: \"Vedic Nepali\";\n  font-style: normal;\n  font-weight: 100 900;\n"
                 "  font-display: swap;\n"
-                f"  src: url(\"./fonts/subsets/{FAMILY}-{key}-Variable.woff2\") format(\"woff2-variations\"),\n"
-                f"       url(\"./fonts/subsets/{FAMILY}-{key}-Variable.woff2\") format(\"woff2\");\n"
+                f"  src: url(\"./fonts/subsets/{STEM}-{key}-Variable.woff2\") format(\"woff2-variations\"),\n"
+                f"       url(\"./fonts/subsets/{STEM}-{key}-Variable.woff2\") format(\"woff2\");\n"
                 f"  unicode-range: {uni.replace(',', ', ')};\n}}\n")
-    css += (".nagosi { font-family: \"Nagosi\", \"Noto Serif Devanagari\", \"Kohinoor Devanagari\", "
-            "\"Mangal\", serif; }\n.nagosi-nepali { font-feature-settings: \"ss01\"; }\n"
-            ".nagosi-classical { font-feature-settings: \"ss02\", \"ss03\"; }\n")
-    (CDN / "nagosi.css").write_text(css)
+    css += (".vedicnepali { font-family: \"Vedic Nepali\", \"Noto Serif Devanagari\", \"Kohinoor Devanagari\", "
+            "\"Mangal\", serif; }\n.vedicnepali-nepali { font-feature-settings: \"ss01\"; }\n"
+            ".vedicnepali-classical { font-feature-settings: \"ss02\", \"ss03\"; }\n")
+    (CDN / "vedicnepali.css").write_text(css)
     st = head
     for wght, style in WEIGHTS:
-        st += ("@font-face {\n  font-family: \"Nagosi\";\n  font-style: normal;\n"
+        st += ("@font-face {\n  font-family: \"Vedic Nepali\";\n  font-style: normal;\n"
                f"  font-weight: {wght};\n  font-display: swap;\n"
-               f"  src: url(\"./fonts/static/{FAMILY}-{style}.woff2\") format(\"woff2\");\n}}\n")
-    (CDN / "nagosi-static.css").write_text(st)
+               f"  src: url(\"./fonts/static/{STEM}-{style}.woff2\") format(\"woff2\");\n}}\n")
+    (CDN / "vedicnepali-static.css").write_text(st)
     (CDN / "fonts" / "ranges.json").write_text(json.dumps(ranges, indent=2) + "\n")
-    log("wrote cdn/nagosi.css, cdn/nagosi-static.css")
+    log("wrote cdn/vedicnepali.css, cdn/vedicnepali-static.css")
 
 
 def proof(vf_path: Path, made) -> None:
@@ -537,9 +538,9 @@ def main() -> None:
     deva["maxp"].recalc(deva)
     deva["post"].formatType = 2.0
 
-    vf_path = BUILDS / "variable" / f"{FAMILY}[wght].ttf"
+    vf_path = BUILDS / "variable" / f"{STEM}[wght].ttf"
     save(deva, vf_path)
-    save(TTFont(vf_path), CDN / "fonts" / f"{FAMILY}-Variable.woff2", "woff2")
+    save(TTFont(vf_path), CDN / "fonts" / f"{STEM}-Variable.woff2", "woff2")
     export_web_subsets(vf_path)
     if not args.no_static:
         export_static(vf_path)

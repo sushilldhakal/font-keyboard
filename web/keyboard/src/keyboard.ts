@@ -1,5 +1,5 @@
 /**
- * On-screen keyboard for NagosiInput.
+ * On-screen keyboard for VedicNepaliInput.
  *
  * Several keyboards, switched with the ‹ › arrows on the space bar (or by swiping along it):
  * - नेपाली: the Nepali traditional phone layout (engine/keyboards/nepali-traditional.json). Every key
@@ -11,8 +11,8 @@
  * - Sanskrit (IAST): QWERTY keys typed as IAST.
  * १२३ opens digits and symbols on the letter keyboards. Suggestions follow the word being typed.
  */
-import { keyboards, layouts, type PhoneKey, type PhoneLayout } from "@nagosi/engine";
-import type { NagosiInput, SchemeId } from "./input.js";
+import { keyboards, layouts, type PhoneKey, type PhoneLayout } from "@vedicnepali/engine";
+import type { VedicNepaliInput, SchemeId } from "./input.js";
 
 const QWERTY = [
   ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
@@ -82,7 +82,7 @@ export interface KeyboardOptions {
 
 export class OnScreenKeyboard {
   readonly root: HTMLElement;
-  private input: NagosiInput;
+  private input: VedicNepaliInput;
   private shift = false;
   private layout: KeyboardLayout;
   /** Letter keyboards: 0 letters, 1 digits and symbols. */
@@ -91,13 +91,13 @@ export class OnScreenKeyboard {
   private popup: HTMLElement | null = null;
   private onSwitch?: (choice: KeyboardChoice) => void;
 
-  constructor(container: HTMLElement, input: NagosiInput, opts: KeyboardOptions = {}) {
+  constructor(container: HTMLElement, input: VedicNepaliInput, opts: KeyboardOptions = {}) {
     this.input = input;
     this.layout = opts.layout ?? "nepali-traditional";
     this.holdDelay = opts.holdDelay ?? 380;
     this.onSwitch = opts.onSwitch;
     this.root = document.createElement("div");
-    this.root.className = "nagosi-kbd";
+    this.root.className = "vedicnepali-kbd";
     this.root.setAttribute("role", "group");
     this.root.setAttribute("aria-label", "On-screen Nepali keyboard");
     container.append(this.root);
@@ -172,19 +172,19 @@ export class OnScreenKeyboard {
   private openPopup(anchor: HTMLElement, choices: [string, string][]) {
     this.closePopup();
     const pop = document.createElement("div");
-    pop.className = "nagosi-pop";
+    pop.className = "vedicnepali-pop";
     pop.setAttribute("role", "menu");
     for (const [label, keys] of choices) {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "nagosi-key";
+      b.className = "vedicnepali-key";
       b.setAttribute("role", "menuitem");
       b.setAttribute("aria-label", `${label} (${keys})`);
       const m = document.createElement("span");
-      m.className = "nagosi-key-main";
+      m.className = "vedicnepali-key-main";
       m.textContent = label;
       const s = document.createElement("span");
-      s.className = "nagosi-key-sub";
+      s.className = "vedicnepali-key-sub";
       s.textContent = keys;
       b.append(m, s);
       b.addEventListener("mousedown", (e) => e.preventDefault());
@@ -206,15 +206,15 @@ export class OnScreenKeyboard {
   private button(text: string, cls: string, aria: string, onPress: () => void, sub?: string, more?: [string, string][]): HTMLButtonElement {
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "nagosi-key " + cls;
+    b.className = "vedicnepali-key " + cls;
     b.setAttribute("aria-label", aria);
     const main = document.createElement("span");
-    main.className = "nagosi-key-main";
+    main.className = "vedicnepali-key-main";
     main.textContent = text;
     b.append(main);
     if (sub) {
       const s = document.createElement("span");
-      s.className = "nagosi-key-sub";
+      s.className = "vedicnepali-key-sub";
       s.textContent = sub;
       b.append(s);
     }
@@ -295,18 +295,18 @@ export class OnScreenKeyboard {
     if (!c) return this.button("space", "space", "Space", type);
     const b = document.createElement("button");
     b.type = "button";
-    b.className = "nagosi-key space switcher";
+    b.className = "vedicnepali-key space switcher";
     b.setAttribute("aria-label", `Space. Keyboard: ${c.label}. Use the arrows to switch.`);
     const prev = document.createElement("span");
-    prev.className = "nagosi-arrow prev";
+    prev.className = "vedicnepali-arrow prev";
     prev.textContent = "‹";
     prev.setAttribute("role", "button");
     prev.setAttribute("aria-label", "Previous keyboard");
     const name = document.createElement("span");
-    name.className = "nagosi-key-main";
+    name.className = "vedicnepali-key-main";
     name.textContent = c.label;
     const next = document.createElement("span");
-    next.className = "nagosi-arrow next";
+    next.className = "vedicnepali-arrow next";
     next.textContent = "›";
     next.setAttribute("role", "button");
     next.setAttribute("aria-label", "Next keyboard");
@@ -334,7 +334,7 @@ export class OnScreenKeyboard {
     const rows = this.page === 0 ? layout.rows : layout.numbers;
     rows.forEach((row, ri) => {
       const r = document.createElement("div");
-      r.className = "nagosi-row";
+      r.className = "vedicnepali-row";
       const last = ri === rows.length - 1;
       if (last && this.page === 0) {
         r.append(this.button("⇧", "wide" + (this.shift ? " on" : ""), "Shift: second letters", () => { this.shift = !this.shift; this.render(); }));
@@ -344,7 +344,7 @@ export class OnScreenKeyboard {
       this.root.append(r);
     });
     const bottom = document.createElement("div");
-    bottom.className = "nagosi-row";
+    bottom.className = "vedicnepali-row";
     const [left, danda] = layout.bottom;
     bottom.append(
       this.button(this.page === 0 ? "१२३" : "कख", "wide", this.page === 0 ? "Digits and symbols" : "Letters", () => { this.page = 1 - this.page; this.shift = false; this.render(); }),
@@ -369,7 +369,7 @@ export class OnScreenKeyboard {
     const rows = this.layout === "inscript" ? layouts.inscript.rows : QWERTY;
     for (const [ri, row] of rows.entries()) {
       const r = document.createElement("div");
-      r.className = "nagosi-row";
+      r.className = "vedicnepali-row";
       const last = ri === rows.length - 1;
       if (last) {
         r.append(this.button("⇧", "wide" + (this.shift ? " on" : ""), "Shift", () => { this.shift = !this.shift; this.render(); }));
@@ -387,7 +387,7 @@ export class OnScreenKeyboard {
       this.root.append(r);
     }
     const bottom = document.createElement("div");
-    bottom.className = "nagosi-row";
+    bottom.className = "vedicnepali-row";
     bottom.append(
       this.button(",", "", "Comma", () => this.input.key(",")),
       this.spaceBar(() => this.input.key(" ")),

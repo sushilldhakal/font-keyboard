@@ -1,8 +1,8 @@
-# Nagosi keyboard for Android
+# Vedic Nepali keyboard for Android
 
 - `engine/`: pure Kotlin port of `engine/` (TypeScript reference), unit-tested on the JVM against `tests/vectors`.
-- `app/`: the input method (`NagosiIme`), its key view and a setup screen. Schemes, dictionaries and
-  the Nagosi font are copied from the repository into the APK at build time (`syncNagosiAssets`), so
+- `app/`: the input method (`VedicNepaliIme`), its key view and a setup screen. Schemes, dictionaries and
+  the Vedic Nepali font are copied from the repository into the APK at build time (`syncVedicNepaliAssets`), so
   typing is fully offline and there is one source of truth.
 
 ```bash
@@ -10,7 +10,7 @@
 ./gradlew :app:assembleDebug      # app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Install the APK, open **Nagosi Keyboard**, tap *Open keyboard settings* and enable Nagosi, then
+Install the APK, open **Vedic Nepali Keyboard**, tap *Open keyboard settings* and enable Vedic Nepali, then
 *Choose keyboard*. The नेपाली key cycles Romanized Nepali → IAST → INSCRIPT; 🌐 switches to your other keyboards.
 
 Keyboards: the ‹ › arrows on the space bar (or a swipe along it) switch between
@@ -26,12 +26,12 @@ Keyboards: the ‹ › arrows on the space bar (or a swipe along it) switch betw
 खाली ठाउँ (space) to take the first one. Recognition is Google ML Kit Digital Ink, on the device; the
 Nepali model (~20 MB) downloads the first time ✍ is opened and then works offline.
 
-Settings (in the Nagosi app): keyboard, Space picks the best word, forget learned words. Nothing typed
+Settings (in the Vedic Nepali app): keyboard, Space picks the best word, forget learned words. Nothing typed
 in a password or incognito field is learned.
 
 Not yet tested on devices. Release signing reads `android/keystore.properties` (git-ignored), and
 `./gradlew :app:bundleRelease` builds the AAB. Play steps and the device checklist are in
 [docs/PRODUCTION.md](../docs/PRODUCTION.md) and [docs/DEVICE-TESTING.md](../docs/DEVICE-TESTING.md).
 
-About the font: Android has no supported way to install a system-wide font. Apps use Nagosi by
+About the font: Android has no supported way to install a system-wide font. Apps use Vedic Nepali by
 bundling the TTFs (`font/builds`). The keyboard uses it for its own keys and suggestions.

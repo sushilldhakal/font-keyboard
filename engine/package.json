@@ -1,5 +1,5 @@
 {
-  "name": "@nagosi/engine",
+  "name": "@vedicnepali/engine",
   "version": "1.1.0",
   "description": "Nepali and Sanskrit Romanized input: transliteration (Romanized Nepali, IAST, ITRANS, Harvard-Kyoto), Devanagari Unicode helpers and word suggestions",
   "license": "MIT",

@@ -14,5 +14,5 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
-    systemProperty("nagosi.root", rootDir.parentFile.absolutePath)
+    systemProperty("vedicnepali.root", rootDir.parentFile.absolutePath)
 }

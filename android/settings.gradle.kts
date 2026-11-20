@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "nagosi-keyboard"
+rootProject.name = "vedicnepali-keyboard"
 include(":engine", ":app")
