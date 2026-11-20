@@ -43,6 +43,9 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
+        with:
+          # the default ("tools platform-tools") fails: current sdkmanager has no "tools" package
+          packages: platform-tools platforms;android-35
       - working-directory: android
         run: ./gradlew :engine:test :app:assembleDebug --console=plain
 
