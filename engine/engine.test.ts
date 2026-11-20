@@ -160,3 +160,61 @@ describe("Nepali traditional phone layout", () => {
     for (const [tap, hold] of l.rows.flat()) expect(tap).not.toBe(hold);
   });
 });
+
+// Every mode must insert plain standard Unicode: nothing from a Private Use Area, nothing a
+// particular font has to know about, and nothing NFC would change. The font is only for display.
+describe("standard unicode output", () => {
+  const allowed = (ch: string) => {
+    const c = ch.codePointAt(0)!;
+    return (c >= 0x20 && c <= 0x7e) // ASCII digits and punctuation
+      || (c >= 0x0900 && c <= 0x097f) // Devanagari
+      || (c >= 0x1cd0 && c <= 0x1cff) // Vedic Extensions
+      || (c >= 0xa8e0 && c <= 0xa8ff) // Devanagari Extended
+      || c === 0x200c || c === 0x200d // ZWNJ, ZWJ
+      || c === 0x20b9 // ₹
+      || c === 0x5350; // 卐 (standard Unicode, drawn by the system font)
+  };
+  const bad = (s: string) => [...s].filter((ch) => !allowed(ch)).map((ch) => `U+${ch.codePointAt(0)!.toString(16)}`);
+
+  for (const [id, layout] of Object.entries(keyboards)) {
+    it(`${id}: every key inserts standard NFC Unicode`, () => {
+      const outs: string[] = [];
+      const take = (k: unknown) => { if (Array.isArray(k)) for (const s of k) if (typeof s === "string") outs.push(s); };
+      for (const row of layout.rows) row.forEach(take);
+      layout.bottom?.forEach(take);
+      for (const row of layout.numbers ?? []) row.forEach(take);
+      expect(outs.length).toBeGreaterThan(30);
+      for (const s of outs) {
+        expect(bad(s), `${id} key ${s}`).toEqual([]);
+        expect(s.normalize("NFC"), `${id} key ${s} is not NFC`).toBe(s);
+      }
+    });
+  }
+
+  it("transliteration output is standard NFC Unicode for every scheme", () => {
+    for (const name of ["transliteration", "roman", "spellings"]) {
+      const raw = JSON.stringify(vectors(name));
+      for (const s of raw.match(/[ऀ-ॿ᳐-᳿꣠-ꣿ‌‍]+/g) ?? []) {
+        expect(s.normalize("NFC")).toBe(s);
+      }
+      expect(raw).not.toMatch(/[-]/);
+    }
+    const samples: [string, string][] = [["nepali-roman", "dhakal kRShNa"], ["iast", "agnimīḷe purohitaṃ saṃskṛtam"], ["itrans", "kRRiShNa j~nAna"], ["harvard-kyoto", "kRSNa jJAna"]];
+    for (const [id, w] of samples) {
+      const s = (schemes as Record<string, Parameters<typeof transliterate>[1]>)[id];
+      if (!s) continue;
+      const out = transliterate(w, s);
+      expect(bad(out), `${id}: ${out}`).toEqual([]);
+      expect(out).not.toMatch(/[a-zA-Zāīūṛṝḷṃḥṅñṭḍṇśṣ]/);
+      expect(out.normalize("NFC")).toBe(out);
+    }
+  });
+
+  it("every dictionary word is standard NFC Devanagari", () => {
+    for (const lang of ["ne", "sa"]) {
+      const words: [string, number][] = JSON.parse(readFileSync(new URL(`./suggestions/data/${lang}.json`, import.meta.url), "utf8"));
+      const wrong = words.map((e) => e[0]).filter((w) => bad(w).length || w.normalize("NFC") !== w || !/^[ऀ-ॿ᳐-᳿꣠-ꣿ‌‍]+$/.test(w));
+      expect(wrong.slice(0, 10)).toEqual([]);
+    }
+  });
+});

@@ -54,3 +54,14 @@ jobs:
         run: ios/scripts/sync-resources.sh || true; git diff --stat --exit-code -- ios/NagosiEngine
       - working-directory: ios/NagosiEngine
         run: swift test
+      - name: Build the app and keyboard extension (with ML Kit pods)
+        working-directory: ios
+        env:
+          LANG: en_US.UTF-8
+          LC_ALL: en_US.UTF-8
+        run: |
+          brew install xcodegen
+          xcodegen
+          pod install
+          xcodebuild -workspace Nagosi.xcworkspace -scheme Nagosi -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build

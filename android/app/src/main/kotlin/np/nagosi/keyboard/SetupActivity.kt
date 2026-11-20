@@ -10,6 +10,7 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioButton
@@ -38,7 +39,7 @@ class SetupActivity : Activity() {
         }
 
         col.addView(text("नगोसी Nagosi", 30f, bold = true))
-        col.addView(text("Type Nepali and Sanskrit anywhere. Works offline.", 16f))
+        col.addView(text("Type Nepali and Sanskrit anywhere. Everything you type is standard Unicode, so it reads correctly in any font and any app.", 16f))
         col.addView(text("1. Turn on the keyboard", 18f, bold = true))
         col.addView(Button(this).apply {
             text = "Open keyboard settings"
@@ -70,6 +71,21 @@ class SetupActivity : Activity() {
             prefs.edit().putString(NagosiIme.KEY_KEYBOARD, options[checkedId - 1000].first).apply()
         }
         col.addView(group)
+        col.addView(text("4. Typing", 18f, bold = true))
+        col.addView(CheckBox(this).apply {
+            text = "Space picks the best word (dhakal → ढकाल). Backspace right after puts back what you typed."
+            isChecked = prefs.getBoolean(NagosiIme.KEY_AUTO_PICK, true)
+            setOnCheckedChangeListener { _, on -> prefs.edit().putBoolean(NagosiIme.KEY_AUTO_PICK, on).apply() }
+        })
+        col.addView(Button(this).apply {
+            text = "Forget learned words"
+            setOnClickListener {
+                prefs.edit().remove("learned_ne").remove("learned_sa")
+                    .putInt(NagosiIme.KEY_LEARNED_EPOCH, prefs.getInt(NagosiIme.KEY_LEARNED_EPOCH, 0) + 1).apply()
+                text = "Learned words forgotten"
+            }
+        })
+        col.addView(text("✍ Handwriting: draw a word on the ✍ page. The Nepali model (about 20 MB) downloads once, then it works offline. Typing never uses the network, and nothing you type leaves the phone.", 14f))
         col.addView(text("Try it", 18f, bold = true))
         col.addView(EditText(this).apply {
             typeface = tf

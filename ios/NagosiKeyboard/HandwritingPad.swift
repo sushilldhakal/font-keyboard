@@ -30,8 +30,11 @@ final class HandwritingPad: UIView {
     private var model: DigitalInkRecognitionModel?
     #endif
 
-    init(lang: String, font: UIFont) {
+    private let fullAccess: Bool
+
+    init(lang: String, font: UIFont, fullAccess: Bool) {
         self.lang = lang
+        self.fullAccess = fullAccess
         super.init(frame: .zero)
         backgroundColor = .systemBackground
         layer.cornerRadius = 8
@@ -75,6 +78,10 @@ final class HandwritingPad: UIView {
         model = m
         let manager = ModelManager.modelManager()
         if manager.isModelDownloaded(m) { ready(m); return }
+        guard fullAccess else {
+            show(.unavailable("हस्तलेखन मोडेल एक पटक डाउनलोड गर्न Settings › General › Keyboard › Keyboards › Nagosi › Allow Full Access खोल्नुहोस्।"))
+            return
+        }
         show(.downloading)
         NotificationCenter.default.addObserver(forName: .mlkitModelDownloadDidSucceed, object: nil, queue: .main) { [weak self] _ in
             self?.ready(m)

@@ -40,6 +40,9 @@ enum FontInstaller {
 struct ContentView: View {
     @State private var sample = ""
     @State private var status: String?
+    @State private var keyboard = NagosiSettings.keyboard ?? NagosiSettings.keyboards[0].id
+    @State private var autoPick = NagosiSettings.autoPick
+    @State private var forgot = false
 
     var body: some View {
         NavigationStack {
@@ -48,7 +51,7 @@ struct ContentView: View {
                     Text("नमस्ते! नेपाली र संस्कृत लेख्नुहोस्।")
                         .font(.custom("Nagosi", size: 28))
                         .padding(.vertical, 6)
-                    Text("Type Nepali and Sanskrit in any app. Works offline, without Full Access.")
+                    Text("Type Nepali and Sanskrit in any app. Everything you type is standard Unicode, so it reads correctly in any font.")
                         .foregroundStyle(.secondary)
                 }
                 Section("Turn on the keyboard") {
@@ -59,12 +62,41 @@ struct ContentView: View {
                         if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
                     }
                 }
-                Section("How to type") {
-                    row("Romanized Nepali", "namaste → नमस्ते · nepaal → नेपाल")
-                    row("IAST (Sanskrit)", "saṃskṛtam → संस्कृतम्")
-                    row("INSCRIPT", "one key, one letter")
-                    Text("Tap the नेपाली key to switch style. Suggestions appear above the keys.")
-                        .font(.footnote).foregroundStyle(.secondary)
+                Section {
+                    Picker("Keyboard", selection: $keyboard) {
+                        ForEach(NagosiSettings.keyboards, id: \.id) { k in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(k.label).font(.custom("Nagosi", size: 18))
+                                Text(k.detail).font(.footnote).foregroundStyle(.secondary)
+                            }.tag(k.id)
+                        }
+                    }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                    .onChange(of: keyboard) { NagosiSettings.keyboard = $0 }
+                } header: {
+                    Text("Keyboard")
+                } footer: {
+                    Text("Switch any time with ‹ › on the space bar.")
+                }
+                Section {
+                    Toggle("Space picks the best word", isOn: $autoPick)
+                        .onChange(of: autoPick) { NagosiSettings.autoPick = $0 }
+                    Button(forgot ? "Learned words forgotten" : "Forget learned words", role: .destructive) {
+                        NagosiSettings.forgetLearned()
+                        forgot = true
+                    }
+                    .disabled(forgot)
+                } header: {
+                    Text("Typing")
+                } footer: {
+                    Text("dhakal → ढकाल when you press space. Backspace right after puts back what you typed. Words you pick are remembered on this device only.")
+                }
+                Section {
+                    Text("Tap ✍ on the keyboard and draw a word. Recognition runs on the device. The Nepali model (about 20 MB) downloads once, which needs Allow Full Access for Nagosi; after that it works offline. Typing never uses the network and nothing you type leaves the device.")
+                        .font(.footnote)
+                } header: {
+                    Text("Handwriting")
                 }
                 Section("Use the Nagosi font in other apps") {
                     Button("Install Nagosi fonts") {
@@ -83,13 +115,6 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Nagosi")
-        }
-    }
-
-    private func row(_ title: String, _ detail: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(.headline)
-            Text(detail).font(.custom("Nagosi", size: 17)).foregroundStyle(.secondary)
         }
     }
 }

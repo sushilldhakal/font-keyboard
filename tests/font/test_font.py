@@ -118,3 +118,41 @@ def test_reph_and_i_matra_shape():
     assert any("0930" in n and "094D" in n or n.startswith("uni0930094D") or "reph" in n.lower() for n in names), names
     names, _ = shape("कि")
     assert names[0].startswith("uni093F")
+
+
+# ---------------------------------------------------------------- keyboards
+
+import json as _json
+
+KEYBOARDS = sorted((ROOT / "engine" / "keyboards").glob("*.json"))
+# Standard Unicode a layout may insert that Nagosi leaves to the system font.
+SYSTEM_FONT_ONLY = {"卐"}
+
+
+def _layout_outputs(path):
+    d = _json.loads(path.read_text("utf8"))
+    out = []
+    for section in (d["rows"], [d.get("bottom", [])], d.get("numbers", [])):
+        for row in section:
+            for key in row:
+                out += [s for s in key if isinstance(s, str) and s]
+    return out
+
+
+@pytest.mark.parametrize("path", KEYBOARDS, ids=lambda p: p.stem)
+def test_font_covers_every_key(path):
+    cmap = TTFont(VF).getBestCmap()
+    missing = sorted({c for s in _layout_outputs(path) for c in s if ord(c) not in cmap and c not in SYSTEM_FONT_ONLY})
+    assert not missing, [f"U+{ord(c):04X}" for c in missing]
+
+
+@pytest.mark.parametrize("path", KEYBOARDS, ids=lambda p: p.stem)
+def test_every_letter_key_shapes_cleanly(path):
+    """A key that starts with a letter (क्ष, त्र, श्र, ज्ञ, ॐ...) shapes with no .notdef and no dotted circle."""
+    font = hbfont()
+    for s in _layout_outputs(path):
+        if not ("ऄ" <= s[0] <= "ह" or s[0] in "ॐक़ख़ग़ज़ड़ढ़फ़य़ॠॡॲॳॴॵॶॷॿ"):
+            continue
+        glyphs, _ = shape(s, font)
+        assert ".notdef" not in glyphs, s
+        assert not any("dotted" in g.lower() or g in ("uni25CC",) for g in glyphs), (s, glyphs)

@@ -56,7 +56,11 @@ class NagosiIme : InputMethodService() {
 
     private fun scheme(id: String): Scheme = schemes.getOrPut(id) { NagosiAssets.scheme(this, id) }
 
+    private var learnedEpoch = -1
+
     private fun dictionary(): Suggester {
+        val epoch = prefs.getInt(KEY_LEARNED_EPOCH, 0)
+        if (epoch != learnedEpoch) { dictionaries.clear(); learnedEpoch = epoch }
         val lang = currentKeyboard().lang
         return dictionaries.getOrPut(lang) {
             NagosiAssets.dictionary(this, lang).also { s ->
@@ -88,8 +92,12 @@ class NagosiIme : InputMethodService() {
         return view
     }
 
+    /** Password field, or the app asked for no learning (incognito): learn nothing typed here. */
+    private var privateField = false
+
     override fun onStartInput(attribute: EditorInfo?, restarting: Boolean) {
         super.onStartInput(attribute, restarting)
+        privateField = attribute != null && isPrivate(attribute)
         composer.flush()
         autoPick = null
         keepStrict = false
@@ -117,11 +125,11 @@ class NagosiIme : InputMethodService() {
         if (ch in Composer.COMMIT_KEYS) {
             val roman = composer.buffer
             val composing = composer.composing
-            val pick = if (keepStrict) composing else Spellings.commitWord(roman, composing, composer.scheme, dictionary(), speller)
+            val pick = if (keepStrict || !prefs.getBoolean(KEY_AUTO_PICK, true)) composing else Spellings.commitWord(roman, composing, composer.scheme, dictionary(), speller)
             composer.key(ch)
             ic.commitText(pick + ch, 1)
             if (pick != composing) autoPick = (pick + ch) to roman
-            else if (pick.isNotEmpty()) dictionary().learn(pick)
+            else if (pick.isNotEmpty() && !privateField) dictionary().learn(pick)
             keepStrict = false
         } else {
             ic.setComposingText(composer.key(ch).composing, 1)
@@ -196,7 +204,7 @@ class NagosiIme : InputMethodService() {
             ic.commitText("$word ", 1)
             direct = false
         } else return
-        dictionary().learn(word)
+        if (!privateField) dictionary().learn(word)
         updateSuggestions()
     }
 
@@ -237,6 +245,8 @@ class NagosiIme : InputMethodService() {
     }
 
     private fun saveLearned() {
+        // the settings screen forgot the learned words while this IME held them: don't write them back
+        if (prefs.getInt(KEY_LEARNED_EPOCH, 0) != learnedEpoch) { dictionaries.clear(); return }
         val e = prefs.edit()
         dictionaries.forEach { (lang, s) -> e.putString("learned_$lang", JSONObject(s.learnedWords()).toString()) }
         e.apply()
@@ -258,7 +268,22 @@ class NagosiIme : InputMethodService() {
     }
 
     companion object {
+        fun isPrivate(info: EditorInfo): Boolean {
+            val cls = info.inputType and android.text.InputType.TYPE_MASK_CLASS
+            val v = info.inputType and android.text.InputType.TYPE_MASK_VARIATION
+            val password = (cls == android.text.InputType.TYPE_CLASS_TEXT && v in setOf(
+                android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD,
+                android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,
+                android.text.InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
+            )) || (cls == android.text.InputType.TYPE_CLASS_NUMBER && v == android.text.InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+            return password || info.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING != 0
+        }
+
         const val PREFS = "nagosi"
         const val KEY_KEYBOARD = "keyboard"
+        /** Space takes the best dictionary word for loosely typed roman (default on). */
+        const val KEY_AUTO_PICK = "auto_pick"
+        /** Bumped by the settings screen's "Forget learned words"; the IME then reloads its dictionaries. */
+        const val KEY_LEARNED_EPOCH = "learned_epoch"
     }
 }

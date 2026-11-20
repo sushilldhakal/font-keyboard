@@ -2,7 +2,8 @@ import CoreText
 import NagosiEngine
 import UIKit
 
-/// Nagosi keyboard extension. Works without Full Access: no network, everything is bundled.
+/// Nagosi keyboard extension. Typing is fully offline: every keyboard, scheme and dictionary is
+/// bundled. Full Access is asked for only so the handwriting model can download once.
 ///
 /// Roman keys update marked (composing) text in the host field via setMarkedText. Space, return or
 /// punctuation commits: for loosely typed Romanized Nepali the best dictionary word ("dhakal" →
@@ -20,8 +21,9 @@ final class KeyboardViewController: UIInputViewController {
         Choice(id: "vedic", label: "वैदिक", phone: true, lang: "sa"),
         Choice(id: "iast", label: "Sanskrit (IAST)", phone: false, lang: "sa"),
     ]
-    private var current: Choice = KeyboardViewController.keyboards.first { $0.id == UserDefaults.standard.string(forKey: "keyboard") }
+    private var current: Choice = KeyboardViewController.keyboards.first { $0.id == NagosiSettings.keyboard }
         ?? KeyboardViewController.keyboards[0]
+    private var learnedEpoch = NagosiSettings.learnedEpoch
     private var composer: Composer!
     private var dictionaries: [String: Suggester] = [:]
     private var shift = false
@@ -117,6 +119,11 @@ final class KeyboardViewController: UIInputViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        if let saved = Self.keyboards.first(where: { $0.id == NagosiSettings.keyboard }), saved.id != current.id {
+            current = saved // chosen in the Nagosi app since last time
+            if let s = try? Scheme.bundled(romanSchemeId) { composer.scheme = s }
+            render()
+        }
         composer.flush() // a new field: start clean
         autoPick = nil
         keepStrict = false
@@ -124,13 +131,28 @@ final class KeyboardViewController: UIInputViewController {
         updateSuggestions()
     }
 
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        saveLearned()
+    }
+
     /// Roman scheme for the roman keyboards (and hardware keys on the letter keyboards).
     private var romanSchemeId: String { current.phone ? (current.lang == "sa" ? "iast" : "nepali-roman") : current.id }
 
     private var dictionary: Suggester? {
+        if NagosiSettings.learnedEpoch != learnedEpoch { dictionaries = [:]; learnedEpoch = NagosiSettings.learnedEpoch }
         let lang = current.lang
-        if dictionaries[lang] == nil { dictionaries[lang] = try? Suggester.bundled(lang) }
+        if dictionaries[lang] == nil {
+            dictionaries[lang] = try? Suggester.bundled(lang)
+            dictionaries[lang]?.importLearned(NagosiSettings.learned(lang))
+        }
         return dictionaries[lang]
+    }
+
+    /// Learned words outlive the extension (iOS ends it whenever the keyboard goes away).
+    private func saveLearned() {
+        guard NagosiSettings.learnedEpoch == learnedEpoch else { dictionaries = [:]; return }
+        for (lang, s) in dictionaries { NagosiSettings.saveLearned(lang, s.learnedWords) }
     }
 
     // MARK: editing
@@ -141,7 +163,7 @@ final class KeyboardViewController: UIInputViewController {
         if Composer.commitKeys.contains(ch) {
             let roman = composer.buffer
             let composing = composer.composing
-            let pick = keepStrict ? composing : Spellings.commitWord(roman, composing, composer.scheme, dictionary, speller)
+            let pick = keepStrict || !NagosiSettings.autoPick ? composing : Spellings.commitWord(roman, composing, composer.scheme, dictionary, speller)
             composer.key(ch)
             if !composing.isEmpty {
                 textDocumentProxy.setMarkedText("", selectedRange: NSRange(location: 0, length: 0))
@@ -251,7 +273,7 @@ final class KeyboardViewController: UIInputViewController {
         current = all[(i + step + all.count) % all.count]
         writing = false
         pad = nil
-        UserDefaults.standard.set(current.id, forKey: "keyboard")
+        NagosiSettings.keyboard = current.id
         if let s = try? Scheme.bundled(romanSchemeId) { composer.scheme = s }
         shift = false
         page = 0
@@ -407,7 +429,7 @@ final class KeyboardViewController: UIInputViewController {
     }
 
     private func renderWriting() {
-        let p = pad ?? HandwritingPad(lang: current.lang == "sa" ? "sa" : "ne", font: font)
+        let p = pad ?? HandwritingPad(lang: current.lang == "sa" ? "sa" : "ne", font: font, fullAccess: hasFullAccess)
         pad = p
         p.onCandidates = { [weak self] words in self?.inkWords = words; self?.showInkWords() }
         p.onNewWord = { [weak self] in if self?.inkWords.isEmpty == false { self?.commitInk(nil) } }

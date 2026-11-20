@@ -26,3 +26,6 @@ ios/NagosiEngine/.swiftpm/
 ios/Nagosi.xcodeproj/
 ios/Nagosi.xcworkspace/
 ios/Pods/
+android/keystore.properties
+*.jks
+*.keystore

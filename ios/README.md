@@ -43,5 +43,13 @@ With the pods, the app and the keyboard extension build for the simulator
 Not yet run on a device: watch the extension's memory while handwriting, since iOS limits keyboards
 to roughly 50–70 MB.
 
-Status: the engine package passes its tests. The extension and the app type-check against the
-iOS 16 SDK. They have not run on a device or simulator yet.
+Settings (keyboard, Space picks the best word, forget learned words) live in the app and reach the
+keyboard through the App Group `group.np.nagosi.keyboard` (`Shared/NagosiSettings.swift`). Learned
+words are saved there too, so they survive iOS ending the extension.
+
+Device builds need an Apple account in Xcode. The font-install entitlement also needs Apple's approval
+first; until then, use `NagosiApp/Nagosi-device-test.entitlements`. See
+[docs/PRODUCTION.md](../docs/PRODUCTION.md).
+
+Status: the engine package passes its tests, and the app and extension build for the simulator with
+ML Kit. Not run on a device yet.

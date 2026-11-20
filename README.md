@@ -17,10 +17,16 @@ engine, a web keyboard, an Android keyboard and an iOS keyboard. They share one 
 | --- | --- | --- |
 | Phase 1: font engineering | `font/` | v1.000 built and tested |
 | Phase 2: optimization and CDN | `cdn/` | variable + static WOFF2, unicode-range CSS |
-| Phase 3: transliteration engine | `engine/` | TypeScript reference, 100 tests |
+| Phase 3: transliteration engine | `engine/` | TypeScript reference, 106 tests (incl. standard-Unicode output) |
 | Phase 4: web keyboard and editor | `web/` | `@nagosi/keyboard` + Type Studio |
-| Phase 5: Android keyboard | `android/` | Kotlin IME; debug APK builds |
-| Phase 6: iOS keyboard | `ios/` | Swift package, keyboard extension and app |
+| Phase 5: Android keyboard | `android/` | Kotlin IME + settings; debug APK and signed-ready release AAB build |
+| Phase 6: iOS keyboard | `ios/` | Swift package, keyboard extension and settings app; builds with ML Kit |
+
+**Nagosi Indic**, the phone keyboard, has four keyboards, switched with ‹ › on the space bar: नेपाली
+(traditional keys, direct Nepali), नेपाली (Roman: type as it sounds, with suggestions), वैदिक (direct
+Sanskrit with Vedic marks) and Sanskrit (IAST). A ✍ page recognises handwritten words. Every keyboard
+inserts plain standard Unicode, so the text reads correctly in any font; the font only draws it.
+Production steps: [docs/PRODUCTION.md](docs/PRODUCTION.md). Device checks: [docs/DEVICE-TESTING.md](docs/DEVICE-TESTING.md).
 
 ## Layout
 
@@ -39,7 +45,7 @@ tests/      font tests, shared vectors every engine port must pass
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 .venv/bin/python font/scripts/build.py      # font → font/builds, cdn/fonts, proof PNGs
-.venv/bin/python -m pytest tests/font       # 21 font tests
+.venv/bin/python -m pytest tests/font       # 25 font tests (OTS, coverage, every keyboard key)
 pnpm install && pnpm test                   # engine + web editor
 (cd android && ./gradlew :engine:test :app:assembleDebug)
 (cd ios/NagosiEngine && swift test)

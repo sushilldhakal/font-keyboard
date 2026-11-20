@@ -13,6 +13,7 @@ targets:
     platform: iOS
     sources:
       - NagosiApp
+      - Shared
       - path: Fonts
         type: folder
         buildPhase: resources
@@ -24,6 +25,8 @@ targets:
       properties:
         # install the Nagosi fonts for all apps (CTFontManagerRegisterFontURLs .persistent)
         com.apple.developer.user-fonts: [system-installation]
+        # settings the app writes and the keyboard reads (NagosiSettings)
+        com.apple.security.application-groups: [group.np.nagosi.keyboard]
     info:
       path: NagosiApp/Info.plist
       properties:
@@ -44,10 +47,15 @@ targets:
     platform: iOS
     sources:
       - NagosiKeyboard
+      - Shared
       - path: Fonts/Nagosi-Variable.ttf
         buildPhase: resources
     dependencies:
       - package: NagosiEngine
+    entitlements:
+      path: NagosiKeyboard/NagosiKeyboard.entitlements
+      properties:
+        com.apple.security.application-groups: [group.np.nagosi.keyboard]
     info:
       path: NagosiKeyboard/Info.plist
       properties:

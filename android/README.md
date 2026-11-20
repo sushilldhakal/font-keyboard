@@ -26,9 +26,12 @@ Keyboards: the ‹ › arrows on the space bar (or a swipe along it) switch betw
 खाली ठाउँ (space) to take the first one. Recognition is Google ML Kit Digital Ink, on the device; the
 Nepali model (~20 MB) downloads the first time ✍ is opened and then works offline.
 
-Not yet tested on devices. Before a Play release: test on a few real phones (small screen, Android 7 and 15,
-dark mode, a hardware keyboard), add a release signing config, and add a privacy policy (the keyboard
-collects nothing: learned words stay on the phone).
+Settings (in the Nagosi app): keyboard, Space picks the best word, forget learned words. Nothing typed
+in a password or incognito field is learned.
+
+Not yet tested on devices. Release signing reads `android/keystore.properties` (git-ignored), and
+`./gradlew :app:bundleRelease` builds the AAB. Play steps and the device checklist are in
+[docs/PRODUCTION.md](../docs/PRODUCTION.md) and [docs/DEVICE-TESTING.md](../docs/DEVICE-TESTING.md).
 
 About the font: Android has no supported way to install a system-wide font. Apps use Nagosi by
 bundling the TTFs (`font/builds`). The keyboard uses it for its own keys and suggestions.
