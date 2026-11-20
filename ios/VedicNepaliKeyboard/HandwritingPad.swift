@@ -83,13 +83,13 @@ final class HandwritingPad: UIView {
             return
         }
         show(.downloading)
-        NotificationCenter.default.addObserver(forName: .mlkitModelDownloadDidSucceed, object: nil, queue: .main) { [weak self] _ in
-            self?.ready(m)
+        InkModelLoader.shared.download(m) { [weak self] error in
+            if let error {
+                self?.show(.unavailable("डाउनलोड भएन (\(error))। इन्टरनेट जोडेर ✍ फेरि थिच्नुहोस्।"))
+            } else {
+                self?.ready(m)
+            }
         }
-        NotificationCenter.default.addObserver(forName: .mlkitModelDownloadDidFail, object: nil, queue: .main) { [weak self] _ in
-            self?.show(.unavailable("डाउनलोड भएन। Settings › Vedic Nepali › Full Access खोलेर इन्टरनेट जोड्नुहोस्।"))
-        }
-        manager.download(m, conditions: ModelDownloadConditions(allowsCellularAccess: true, allowsBackgroundDownloading: true))
         #else
         show(.unavailable("हस्तलेखनका लागि ML Kit चाहिन्छ (ios/Podfile)।"))
         #endif
@@ -157,3 +157,75 @@ final class HandwritingPad: UIView {
         #endif
     }
 }
+
+#if canImport(MLKitDigitalInkRecognition)
+/// One model download per keyboard process, however many times the pad is opened: later callers
+/// wait for the running download, and the notification observers are removed when it ends.
+final class InkModelLoader {
+    static let shared = InkModelLoader()
+
+    private var callbacks: [(String?) -> Void] = []
+    private var observers: [NSObjectProtocol] = []
+    private var timeout: Timer?
+
+    func download(_ model: DigitalInkRecognitionModel, done: @escaping (String?) -> Void) {
+        BackgroundSessionFix.install()
+        let manager = ModelManager.modelManager()
+        if manager.isModelDownloaded(model) { done(nil); return }
+        callbacks.append(done)
+        guard callbacks.count == 1 else { return }  // already downloading: wait for it
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(forName: .mlkitModelDownloadDidSucceed, object: nil, queue: .main) { [weak self] _ in
+            self?.finish(nil)
+        })
+        observers.append(center.addObserver(forName: .mlkitModelDownloadDidFail, object: nil, queue: .main) { [weak self] note in
+            let error = note.userInfo?[ModelDownloadUserInfoKey.error.rawValue] as? Error
+            self?.finish(error?.localizedDescription ?? "error")
+        })
+        // Never leave the pad saying "downloading" forever: give up after 3 minutes so ✍ can retry.
+        timeout = Timer.scheduledTimer(withTimeInterval: 180, repeats: false) { [weak self] _ in
+            self?.finish(manager.isModelDownloaded(model) ? nil : "timeout")
+        }
+        manager.download(model, conditions: ModelDownloadConditions(allowsCellularAccess: true, allowsBackgroundDownloading: false))
+    }
+
+    private func finish(_ error: String?) {
+        timeout?.invalidate()
+        timeout = nil
+        observers.forEach(NotificationCenter.default.removeObserver)
+        observers = []
+        let pending = callbacks
+        callbacks = []
+        pending.forEach { $0(error) }
+    }
+}
+
+/// ML Kit downloads models through a background `URLSession`. In an app extension iOS runs a
+/// background session only when its configuration names a shared container, which ML Kit doesn't
+/// set, so the download never starts and the pad says "downloading" forever. This fills in the
+/// keyboard's App Group for background configurations made in this process that have none.
+/// (Same fix as theGBguy/nepali-unicode-keyboard, iosApp/Keyboard/MLKitHandwriting.swift.)
+enum BackgroundSessionFix {
+    private static var installed = false
+
+    static func install() {
+        guard !installed else { return }
+        installed = true
+        guard let original = class_getClassMethod(URLSessionConfiguration.self, #selector(URLSessionConfiguration.background(withIdentifier:))),
+              let replacement = class_getClassMethod(URLSessionConfiguration.self, #selector(URLSessionConfiguration.vn_background(withIdentifier:)))
+        else { return }
+        method_exchangeImplementations(original, replacement)
+    }
+}
+
+extension URLSessionConfiguration {
+    @objc fileprivate class func vn_background(withIdentifier identifier: String) -> URLSessionConfiguration {
+        // The implementations are exchanged, so this calls iOS's own method.
+        let configuration = vn_background(withIdentifier: identifier)
+        if configuration.sharedContainerIdentifier == nil {
+            configuration.sharedContainerIdentifier = VedicNepaliSettings.appGroup
+        }
+        return configuration
+    }
+}
+#endif
