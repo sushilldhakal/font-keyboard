@@ -66,5 +66,5 @@ jobs:
           brew install xcodegen
           xcodegen
           pod install
-          xcodebuild -workspace VedicNepali.xcworkspace -scheme Vedic Nepali -sdk iphonesimulator \
+          xcodebuild -workspace VedicNepali.xcworkspace -scheme VedicNepali -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
