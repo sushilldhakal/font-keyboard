@@ -51,7 +51,7 @@ struct ContentView: View {
                     Text("नमस्ते! नेपाली र संस्कृत लेख्नुहोस्।")
                         .font(.custom("Vedic Nepali", size: 28))
                         .padding(.vertical, 6)
-                    Text("Type Nepali and Sanskrit in any app. Everything you type is standard Unicode, so it reads correctly in any font.")
+                    Text("Type Nepali and English in any app. Everything you type is standard Unicode, so it reads correctly in any font.")
                         .foregroundStyle(.secondary)
                 }
                 Section("Turn on the keyboard") {
@@ -77,7 +77,7 @@ struct ContentView: View {
                 } header: {
                     Text("Keyboard")
                 } footer: {
-                    Text("Switch any time with ‹ › on the space bar.")
+                    Text("Switch any time with the ⚙ key above the keys.")
                 }
                 Section {
                     Toggle("Space picks the best word", isOn: $autoPick)
@@ -93,7 +93,7 @@ struct ContentView: View {
                     Text("dhakal → ढकाल when you press space. Backspace right after puts back what you typed. Words you pick are remembered on this device only.")
                 }
                 Section {
-                    Text("Tap ✍ on the keyboard and draw a word. Recognition runs on the device. The Nepali model (about 20 MB) downloads once, which needs Allow Full Access for Vedic Nepali; after that it works offline. Typing never uses the network and nothing you type leaves the device.")
+                    Text("Tap the pen above the keys and write. What you write appears in the text field straight away; tap a suggestion to swap it. Recognition runs on the device. The Nepali model (about 20 MB) downloads once, which needs Allow Full Access for Vedic Nepali; after that it works offline. Typing never uses the network and nothing you type leaves the device.")
                         .font(.footnote)
                 } header: {
                     Text("Handwriting")

@@ -48,7 +48,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: np.vedicnepali.keyboard
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "2"
+        CURRENT_PROJECT_VERSION: "4"
   VedicNepaliKeyboard:
     type: app-extension
     platform: iOS
@@ -81,4 +81,4 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: np.vedicnepali.keyboard.extension
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "2"
+        CURRENT_PROJECT_VERSION: "4"

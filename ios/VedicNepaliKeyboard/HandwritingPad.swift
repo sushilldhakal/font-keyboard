@@ -1,4 +1,5 @@
 import UIKit
+import os
 #if canImport(MLKitDigitalInkRecognition)
 import MLKitCommon
 import MLKitDigitalInkRecognition
@@ -70,6 +71,8 @@ final class HandwritingPad: UIView {
 
     private func prepare() {
         #if canImport(MLKitDigitalInkRecognition)
+        // Before anything touches ModelManager: ML Kit makes its download session when it starts.
+        BackgroundSessionFix.install()
         guard let id = (try? DigitalInkRecognitionModelIdentifier(forLanguageTag: lang))
                 ?? (try? DigitalInkRecognitionModelIdentifier(forLanguageTag: "hi")) else {
             show(.unavailable("हस्तलेखन यो भाषामा उपलब्ध छैन।")); return
@@ -190,6 +193,8 @@ final class InkModelLoader {
     }
 
     private func finish(_ error: String?) {
+        Logger(subsystem: "np.vedicnepali.keyboard", category: "handwriting")
+            .notice("model download finished: \(error ?? "ok", privacy: .public)")
         timeout?.invalidate()
         timeout = nil
         observers.forEach(NotificationCenter.default.removeObserver)
@@ -211,10 +216,16 @@ enum BackgroundSessionFix {
     static func install() {
         guard !installed else { return }
         installed = true
-        guard let original = class_getClassMethod(URLSessionConfiguration.self, #selector(URLSessionConfiguration.background(withIdentifier:))),
-              let replacement = class_getClassMethod(URLSessionConfiguration.self, #selector(URLSessionConfiguration.vn_background(withIdentifier:)))
-        else { return }
-        method_exchangeImplementations(original, replacement)
+        let cls: AnyClass = URLSessionConfiguration.self
+        // The current API and the old one (GTMSessionFetcher may use either).
+        for (name, replacement) in [
+            ("backgroundSessionConfigurationWithIdentifier:", #selector(URLSessionConfiguration.vn_background(withIdentifier:))),
+            ("backgroundSessionConfiguration:", #selector(URLSessionConfiguration.vn_legacyBackground(_:))),
+        ] {
+            guard let a = class_getClassMethod(cls, NSSelectorFromString(name)),
+                  let b = class_getClassMethod(cls, replacement) else { continue }
+            method_exchangeImplementations(a, b)
+        }
     }
 }
 
@@ -222,6 +233,14 @@ extension URLSessionConfiguration {
     @objc fileprivate class func vn_background(withIdentifier identifier: String) -> URLSessionConfiguration {
         // The implementations are exchanged, so this calls iOS's own method.
         let configuration = vn_background(withIdentifier: identifier)
+        if configuration.sharedContainerIdentifier == nil {
+            configuration.sharedContainerIdentifier = VedicNepaliSettings.appGroup
+        }
+        return configuration
+    }
+
+    @objc fileprivate class func vn_legacyBackground(_ identifier: String) -> URLSessionConfiguration {
+        let configuration = vn_legacyBackground(identifier)
         if configuration.sharedContainerIdentifier == nil {
             configuration.sharedContainerIdentifier = VedicNepaliSettings.appGroup
         }

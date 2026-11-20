@@ -14,18 +14,18 @@ brew install xcodegen && xcodegen # generates VedicNepali.xcodeproj from project
 open VedicNepali.xcodeproj
 ```
 
-Keyboards: the ‹ › arrows on the space bar (or a swipe along it) switch between
+Keyboards: the ⚙ in the toolbar above the keys opens a panel to switch between
 - **नेपाली**: Nepali traditional keys (default). Every key types its letter (ढ क ा ल → ढकाल); hold a
   key, or press ⇧ first, for the small letter in its corner (क → क्ष, ि → ी).
 - **नेपाली (Roman)**: type as it sounds (`dhakal` → ढकाल); Space takes the dictionary word, Backspace
   right after undoes it; hold a key for related letters (`d` → ध ड ढ).
-- **वैदिक**: Vedic Sanskrit: vowels on the left (⇧ gives their signs), consonants in varga order,
-  svara marks ॑ ॒ ᳚ ᳛, pluta ३, ꣳ ᳲ ᳵ.
-- **Sanskrit (IAST)**: `saṃskṛtam` → संस्कृतम्.
+- **English**: plain QWERTY.
 
-१२३ opens digits. ✍ opens handwriting: write a word, pick it from the suggestion bar or press
-खाली ठाउँ (space) to take the first one. Recognition is Google ML Kit Digital Ink, on the device; the
-Nepali model (~20 MB) downloads the first time ✍ is opened and then works offline.
+१२३ opens digits. The pen in the toolbar opens handwriting: write, and the best guess appears in the
+text field straight away with other guesses in the suggestion bar (tap one to swap it). Letters you
+write one after another stay together; खाली ठाउँ (space) adds a space and ↵ keeps the word without a
+new line. Recognition is Google ML Kit Digital Ink, on the device; the model (~20 MB) downloads the
+first time and then works offline.
 
 Handwriting on iOS needs ML Kit from CocoaPods (`ios/Podfile`, ML Kit Digital Ink 6.0.0):
 

@@ -7,16 +7,16 @@ enum VedicNepaliSettings {
     static let appGroup = "group.np.vedicnepali.keyboard"
     static let defaults: UserDefaults = UserDefaults(suiteName: appGroup) ?? .standard
 
-    /// The keyboards, in the order the space bar's ‹ › arrows go through them.
+    /// The keyboards, in the order the keyboard's ⚙ panel lists them.
     static let keyboards: [(id: String, label: String, detail: String)] = [
         ("nepali-traditional", "नेपाली", "Traditional keys: tap the big letter, hold for the small one"),
         ("nepali-roman", "नेपाली (Roman)", "Type as it sounds: dhakal → ढकाल, with suggestions"),
-        ("vedic", "वैदिक", "Vedic Sanskrit: svara marks ॑ ॒ ᳚ ᳛, ⇧ for vowel signs"),
-        ("iast", "Sanskrit (IAST)", "saṃskṛtam → संस्कृतम्"),
+        ("english", "English", "Plain English QWERTY"),
     ]
 
+    /// The chosen keyboard; one that no longer exists (the old Vedic and IAST ones) reads as nil.
     static var keyboard: String? {
-        get { defaults.string(forKey: "keyboard") }
+        get { defaults.string(forKey: "keyboard").flatMap { id in keyboards.contains { $0.id == id } ? id : nil } }
         set { defaults.set(newValue, forKey: "keyboard") }
     }
 
