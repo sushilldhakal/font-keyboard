@@ -89,7 +89,8 @@ CI (`.github/workflows/ci.yml`) runs all of this on every push.
    (In Xcode: set the app target's Code Signing Entitlements to `VedicNepaliApp/VedicNepali-device-test.entitlements`.)
    Everything works except the "Install Vedic Nepali fonts" button.
 4. **Version**: `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` in `ios/project.yml` (both targets must match), then `xcodegen`.
-5. **Archive**: open `VedicNepali.xcworkspace`, select the VedicNepali scheme and "Any iOS Device", then Product → Archive, then Distribute App → App Store Connect. Or from the command line:
+5. **Icon**: `ios/VedicNepaliApp/Assets.xcassets/AppIcon.appiconset/icon-1024.png` (one 1024 px PNG; Xcode makes the other sizes).
+6. **Archive**: open `VedicNepali.xcworkspace`, select the VedicNepali scheme and "Any iOS Device", then Product → Archive, then Distribute App → App Store Connect. Or from the command line:
    `xcodebuild -workspace VedicNepali.xcworkspace -scheme Vedic Nepali -configuration Release -archivePath build/VedicNepali.xcarchive archive`.
 6. **App Store Connect**:
    - **Privacy**: "Data Not Collected". `ios/Shared/PrivacyInfo.xcprivacy` declares no tracking, no collected data, and UserDefaults for reasons CA92.1 and 1C8F.1. The ML Kit pods ship their own manifests.
